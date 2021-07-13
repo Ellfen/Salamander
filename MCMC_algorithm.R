@@ -1,4 +1,3 @@
-# THIS SCRIPT USEDS IGRAPH GET.ATTRIBUTE, SET.ATTRIBUTE INSTEAD OF DF
 # The aim of this script is to experiment with partitioning a graph by using
 # a district index to keep track of which district a precinct is in. I will
 # use a dataframe to store the names, population size, voting pattern, and

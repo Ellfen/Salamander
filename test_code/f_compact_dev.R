@@ -8,7 +8,8 @@ library(igraph)
 source("../grid_functions.R")
 
 ############################ SETUP THE NETWORK ################################
-grid = 0
+# select grid = 0,1,2 for real map, sq, hex respectively.
+grid = 2
 n = 5 # grid size
 if (grid == 0) {
   nodes = 26
@@ -24,21 +25,20 @@ district0 = replace(district0, 1:(Ndist*floor(nodes/Ndist)),
 P.data = data.frame(precinct = 1:nodes, population = rep(1, nodes), 
                     votes_blue = votes, votes_red = as.integer(!votes),
                     district = district0)
-P.data
 
 if (grid == 0) {
-  realmap = read.csv("../Data/realwarddata.csv",header=T)
+  realmap = read.csv("Data/realwarddata.csv",header=T)
   realmap=as.matrix(realmap[,2:27])
   adjm = realmap
-  E.data = f.edges(adjm)
+} else if (grid == 1) {
+  adjm = f.adjm.sq(n)
 } else {
-  adjm = f.adjm(n)
-  E.data = f.edges(adjm)
+  adjm = f.adjm.hex(n)
 }
-E.data
+E.data = f.edges(adjm)
 class(E.data)
 E.data$weight = rep(1, dim(E.data)[1])
-E.data
+
 
 # I now have two data frames - one containing precinct data and one containing 
 # edge connections and edge lengths.
@@ -47,7 +47,7 @@ g = graph_from_data_frame(E.data, directed = FALSE,
                           vertices=P.data)
 district_plotting = make_clusters(g,membership = V(g)$district)
 class(district_plotting)
-district_plotting
+
 # Setup the plotting information
 V(g)$size = 10
 if (n > 20) {
@@ -79,19 +79,19 @@ for (i in 1:dim(E.data)[1]) {
   E(g)$p2[i] = V(g)$district[Elist[i,2]]
 }
 
-# You want to add information for all nodes that form the boundary. For a grid
-# this is any node which does not have 4 neighbours.
+
+# You want to add information for all nodes that form the boundary.
 diameter(g)
 radius(g)
 eccentricity(g)
-# For this grid both a perimeter node and internal node have the same eccentricity.
+# Possible for a perimeter node and internal node to have the same eccentricity.
 # Trying to use girth
 girth(g, circle=T)
 # could you make a subgraph of the neighbours and then check if that is connected?
 vid = neighbors(g,7); vid
 gcycle = induced_subgraph(g,vid)
 is.connected(gcycle)
-# This doesn't work for a graph it will not work for real map data either as 
+# This doesn't work for a grid it will not work for real map data either as 
 # neighbors of a real graph are always connected. What you are really interested
 # in is whether it is cyclical.
 
@@ -100,35 +100,52 @@ vid = neighbors(g,12); vid
 gcycle = induced_subgraph(g,vid)
 girth(gcycle)
 # This has girth equal to the number of neighbors.
-vid = neighbors(g,7); vid
+vid = neighbors(g,1); vid
 gcycle = induced_subgraph(g,vid)
 girth(gcycle)
 # This has a girth of zero as there are no cyclical paths.
 
 # The first step is to determine the boundary of each district. For each node
-# in a district need to determine if if is a boundary node. For a grid use
-# number of neighbors in same district. For a real map use girth of subgraph
-# created from neighbours in same district.
+# in a district need to determine if if is a boundary node. For a hex grid and
+# real map use girth of subgraph created from neighbours in same district.
+
 #for (i in 1:Ndist) {
 i = 2
 k = 3
   D = as.vector(V(g)[which(V(g)$district==i | V(g)$district==k)])
   gsub = induced_subgraph(g,D)
   boundary = numeric(length(D))
+  vertex_attr_names(gsub)
   for (j in 1:length(D)) {
-    boundary[j] = ifelse(length(neighbors(gsub,j)) < 4, D[j], 0)
+    gneighbors = induced_subgraph(gsub,neighbors(gsub,j))
+    V(gsub)$boundary[j] = ifelse(girth(gneighbors,circle=F)[[1]] == 0, 1, 0)
   }
-  boundary = boundary[boundary != 0]
-  gsub = induced_subgraph(gsub,boundary)
-  # If the boundary is a cyclical path you will only need to add all the edge
-  # lengths
-  if (girth(gsub) != 0){
-    BoundaryLength = sum(E(gsub)$weight)
-  } else {
-    
+  vertex_attr_names(gsub)
+
+#can you modify breadth first search?
+  # Choose a starting vertex uniformly from the district vertices
+  v0 = sample(which(V(gsub)$boundary==1),1)
+  # generate a vector of neighbors
+  v.neighbors = as.vector(neighbors(gsub,v0))
+  # restrict neighbors to vertices on the boundary
+  # add these to a queue of vertices to search
+  queue = c(v0,v.neighbors[which(V(gsub)$boundary[v.neighbors]==1)])
+  # add queued vertices to explored vector to avoid checking them twice
+  explored=queue
+  
+############################### UP TO HERE ##################################
+  # loop until all vertices in district are searched
+  while (length(queue) > 0) {
+    for (i in 1:length(queue)) {
+      # get neighbors
+      v.neighbors = as.vector(neighbors(G,queue[1]))
+      # restrict neighbors to those in district
+      q = v.neighbors[which(district[v.neighbors]==distID)]
+      # restrict neighbors to those not explored
+      q = setdiff(q,explored)
+      # update the queue
+      queue = c(queue[-1],q)
+      # update explored
+      explored=c(explored,q)
+    }
   }
-  
-  # Choose a starting node 
-  n0 = 1
-  
-#}

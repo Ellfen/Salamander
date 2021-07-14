@@ -14,10 +14,19 @@ library(tictoc)
 
 # A function for constructing the lower triangle of an adjacency matrix for an 
 # nxn grid. Note that adjacency matrices are symmetric.
-f.adjm = function(n) {
+f.adjm.sq = function(n) {
   nodes = n^2
   adjm = matrix(0, nodes, nodes)
   diag(adjm[-1,]) = c(rep(c(rep(1,n-1),0),n-1),rep(1,n-1))
+  diag(adjm[-c(1:n),]) = rep(1,nodes-n)
+  adjm
+}
+
+f.adjm.hex = function(n) {
+  nodes = n^2
+  adjm = matrix(0, nodes, nodes)
+  diag(adjm[-1,]) = c(rep(c(rep(1,n-1),0),n-1),rep(1,n-1))
+  diag(adjm[-c(1:(n+1)),]) = c(rep(c(rep(1,n-1),0),n-2),rep(1,n-1))
   diag(adjm[-c(1:n),]) = rep(1,nodes-n)
   adjm
 }

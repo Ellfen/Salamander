@@ -9,8 +9,8 @@ source("../grid_functions.R")
 
 ############################ SETUP THE NETWORK ################################
 # select grid = 0,1,2 for real map, sq, hex respectively.
-grid = 2
-n = 5 # grid size
+grid = 0
+n = 4 # grid size
 if (grid == 0) {
   nodes = 26
 } else {
@@ -27,7 +27,7 @@ P.data = data.frame(precinct = 1:nodes, population = rep(1, nodes),
                     district = district0)
 
 if (grid == 0) {
-  realmap = read.csv("Data/realwarddata.csv",header=T)
+  realmap = read.csv("../Data/realwarddata.csv",header=T)
   realmap=as.matrix(realmap[,2:27])
   adjm = realmap
 } else if (grid == 1) {
@@ -114,22 +114,22 @@ i = 2
 k = 3
   D = as.vector(V(g)[which(V(g)$district==i | V(g)$district==k)])
   gsub = induced_subgraph(g,D)
-  boundary = numeric(length(D))
-  vertex_attr_names(gsub)
   for (j in 1:length(D)) {
     gneighbors = induced_subgraph(gsub,neighbors(gsub,j))
     V(gsub)$boundary[j] = ifelse(girth(gneighbors,circle=F)[[1]] == 0, 1, 0)
   }
-  vertex_attr_names(gsub)
 
 #can you modify breadth first search?
   # Choose a starting vertex uniformly from the district vertices
   v0 = sample(which(V(gsub)$boundary==1),1)
+  V(gsub)$name[v0]
   # generate a vector of neighbors
   v.neighbors = as.vector(neighbors(gsub,v0))
+  V(gsub)$name[v.neighbors]
   # restrict neighbors to vertices on the boundary
   # add these to a queue of vertices to search
   queue = c(v0,v.neighbors[which(V(gsub)$boundary[v.neighbors]==1)])
+  V(gsub)$name[queue]
   # add queued vertices to explored vector to avoid checking them twice
   explored=queue
   

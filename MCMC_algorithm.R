@@ -25,7 +25,7 @@ f.Jp = function(G,district,Ndist,pop_ideal){
 ############################ SETUP THE NETWORK ################################
 # select grid = 0,1,2 for real map, sq, hex respectively.
 grid = 2
-n = 50 # grid size
+n = 5 # grid size
 if (grid == 0) {
   nodes = 26
 } else {

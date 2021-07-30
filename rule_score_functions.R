@@ -71,7 +71,7 @@ f.popscore = function(G,district,pop_ideal){
     pop_dist[i] = sum(vertex_attr(G,"population")[which(district==i)])
   }
   #cat("Ndist =",Ndist,"pop_ideal =",pop_ideal,"pop_dist = ",pop_dist,sep=" ")
-  Jp = sum((pop_dist/pop_ideal-1)^2)
+  Jp = sqrt(sum(((pop_dist/pop_ideal)-1)^2))
   Jp
 }
 
@@ -107,15 +107,18 @@ f.countyscore = function(G,district,Mc) {
 }
 
 # Compactness score
-f.compactscore = function(G,district) {
+f.compactscore = function(G,district,p1,p2) {
   Ndist = length(unique(district))-1
   boundary = area = numeric(Ndist)
+  #print(boundary)
+  #print(area)
   for (i in 1:Ndist) {
-    gsub = subgraph.edges(G,c(which(E(G)$p1==i),which(E(G)$p2==i)))
-    conflicts = E(gsub)[which(E(gsub)$p1 != E(gsub)$p2)]
-    boundary[i] = sum(E(gsub)$weight[conflicts])
-    area[i] = sum(V(G)$area[which(V(G)$district==i)])
+    conflicts = c(which(temp_p1==i&temp_p2!=i),which(temp_p2==i&temp_p1!=i))
+    boundary[i] = sum(E(g)$weight[conflicts])
+    area[i] = sum(V(G)$area[which(district==i)])
   }
+  #print(boundary)
+  #print(area)
   Ji = sum(boundary^2/area)
   Ji
 }

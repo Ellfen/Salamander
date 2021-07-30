@@ -32,25 +32,40 @@ f.edges = function(adjm) {
   edges
 }
 
-f.graph = function(grid_size, graph_type, Ndist, Ncounty, Data_path) {
-  # graph_type = 0,1,2 for real map, sq, hex respectively.
+f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
+  # graph_type = 0,1,2,3 for real map, sq, hex, NCdummydata respectively.
   if (graph_type == 0) {
     nodes = 26
   } else {
-    nodes = grid_size^2
+    nodes = grid_size^2 # grid_size is 51 for the NC data
   }
-  district0 = rep(Ndist,nodes)
-  district0 = replace(district0, 1:(Ndist*floor(nodes/Ndist)),
-                      rep(1:Ndist, each=(nodes/Ndist)))
-  county = rep(Ncounty,nodes)
-  county = replace(county, 1:(Ncounty*floor(nodes/Ncounty)),
-                   rep(1:Ncounty, each=(nodes/Ncounty)))
-  P.data = data.frame(precinct = 1:nodes, population = rep(1, nodes),
-                      blue = sample(1:5,nodes,replace = T), 
-                      red = sample(1:5,nodes,replace = T),
-                      district = district0, county=county, area=rep(2.6,nodes))
+  
+  if (grid == 3) {
+    load("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCData.RData")
+    P.data = NCData[order(NCData$district),]
+    set.seed(1)
+    remove_index = sample(1:2692,91)
+    P.data = P.data[-remove_index,]
+    P.data$area = rep(2.6, dim(P.data)[1])
+    row.names(P.data) = NULL
+    P.data$name = 1:dim(P.data)[1]
+    P.data = P.data[,c(dim(P.data)[2],1:(dim(P.data)[2]-1))]
+    
+  } else {
+    district0 = rep(Ndist,nodes)
+    district0 = replace(district0, 1:(Ndist*floor(nodes/Ndist)),
+                        rep(1:Ndist, each=(nodes/Ndist)))
+    county = rep(Ncounty,nodes)
+    county = replace(county, 1:(Ncounty*floor(nodes/Ncounty)),
+                     rep(1:Ncounty, each=(nodes/Ncounty)))
+    P.data = data.frame(unitID = 1:nodes, population = rep(1, nodes),
+                        blue = sample(1:5,nodes,replace = T), 
+                        red = sample(1:5,nodes,replace = T),
+                        district = district0, county=county, area=rep(2.6,nodes))
+  }
+
   if (graph_type == 0) {
-    realmap = read.csv(paste(Data_path,"Data/UK/dummywardadjm.csv",sep=""),
+    realmap = read.csv("/Users/laura/Documents/MATH5871_Dissertation/Programming/Data/UK/dummywardadjm.csv",
                        header=T)
     realmap=as.matrix(realmap[,2:27])
     adjm = realmap

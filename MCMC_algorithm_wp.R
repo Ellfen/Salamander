@@ -1,8 +1,4 @@
-# The aim of this script is to experiment with partitioning a graph by using
-# a district index to keep track of which district a precinct is in. I will
-# use a dataframe to store the names, population size, voting pattern, and
-# partitioning of imaginary precincts. I will generate a separate dataframe of 
-# edge information where each edge has a length of 1.
+# The aim of this script to find wp (the population score weighting)
 ######################## IMPORT FUNCTIONS AND LIBRARIES ########################
 library(igraph)
 library(tictoc)
@@ -61,7 +57,7 @@ Eint = min(which(Elist[,2]==nodes+1))
 ################################ CONSTANTS #####################################
 # population constants
 pop_ideal = sum(vertex_attr(g,"population"))/Ndist
-deviation = 0.01
+deviation = 0.03
 ubound = pop_ideal+(deviation*pop_ideal/2)
 lbound = pop_ideal-(deviation*pop_ideal/2)
 pop_bound = c(lbound,ubound); pop_bound
@@ -71,6 +67,14 @@ Mc = 10
 wp = 1000
 wc = 0
 wi = 0
+###################### DOES INITIAL DISTRICT OBEY POP BALANCE #################
+balance_check = numeric(Ndist)
+for (i in 1:Ndist) {
+  pop = sum(vertex_attr(g,"population")[which(V(g)$district==i)])
+  print(pop)
+  balance_check[i] = ifelse(pop_bound[2] >= pop & pop >= pop_bound[1], 1, 0)
+}
+balance_check
 ############################## BOUNDARY FLIP ##################################
 plot(gplot, vertex.color=V(g)$district, vertex.frame.color=V(g)$district,
      edge.color=get.edge.attribute(g,"p1"))
@@ -102,7 +106,8 @@ temp_p2[which(Elist[,2]==v.flip)] = temp_dist[v.flip]
 contigous1 = f.is.contigous1(dist_x,g,temp_dist)
 # Check if proposal is balanced
 balanced = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
-admissible = as.integer(contigous1 & balanced)
+# Removing balanced from admissible function
+admissible = as.integer(contigous1)# & balanced)
 Jpy = f.popscore(g,temp_dist,pop_ideal)
 Jcy = f.countyscore(g,temp_dist,Mc)
 Jiy = f.compactscore(g,temp_dist,temp_p1,temp_p2)
@@ -131,41 +136,11 @@ if (U <= alpha){
   E(g)$p1 = E(g)$p1
   E(g)$p2 = E(g)$p2
 }
-#plot(g, vertex.color=V(g)$district, vertex.frame.color=V(g)$district)
-############################## DISTRIBUTIONS ##################################
-# The vertex and edge information has now been updated. Use this information to
-# convert to a distribution.
-# Using vote count
-#vertex_attr_names(g)
-#V(g)$"blue"
-#V(g)$blue
-# I want to be able to say who won each district
-Nparty = 2
-party = c("blue","red")#,"green")
-# total=numeric(Nparty)
-# seats=character(Ndist)
-# for (i in 1:Ndist) {
-#   for (j in 1:Nparty) {
-#     total[j] = sum(vertex_attr(g,party[j])[which(V(g)$district == i)])
-#   }
-#   print(total)
-#   seats[i] = party[which(total==max(total))]
-# }
-# seats
-# blue_win = length(which(seats=="blue"))
-# red_win = length(which(seats=="red"))
-f.seat.count(g,Nparty,party,"red")
-#par(mfrow=c(1,2))
-#plot(gplot, vertex.color=V(g)$district, vertex.frame.color=V(g)$district,
-     #vertex.label=V(g)$blue,main="Blue Votes")
-#plot(gplot, vertex.color=V(g)$district, vertex.frame.color=V(g)$district,
-     #vertex.label=V(g)$red, main="Red Votes")
 
 # Boundary flip in a loop
-N = 1000
-# distribution functions
-red_seats = numeric(N)
-blue_seats = numeric(N)
+N = 10
+# is balanced check
+balanced = numeric(N)
 #green_seats = numeric(N)
 tic()
 for (i in 1:N) {
@@ -196,8 +171,8 @@ for (i in 1:N) {
   # Check if proposal is contigous
   contigous1 = f.is.contigous1(dist_x,g,temp_dist)
   # Check if proposal is balanced
-  balanced = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
-  admissible = as.integer(contigous1 & balanced)
+  balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
+  admissible = as.integer(contigous1)# & balanced)
   Jpy = f.popscore(g,temp_dist,pop_ideal)
   Jcy = f.countyscore(g,temp_dist,Mc)
   Jiy = f.compactscore(g,temp_dist,temp_p1,temp_p2)

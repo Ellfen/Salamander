@@ -217,14 +217,14 @@ pop1 = NC2010pop$PL10AA_TOT
 pop2 = NC2010pop$PL10VA_TOT
 pop3 = NC2010pop$REG10G_TOT
 # population constants
-pop_ideal = sum(pop1)/13
+pop_ideal = sum(pop1)/13 # pop_ideal = 733499 for total population
 # Based on NC legislature report this should be 733499 which it is for pop1 
 # therefore conclude that NC uses total population information not registered 
 # voters.
-deviation = 0.06
+deviation = 0.06 
 ubound = pop_ideal+(deviation*pop_ideal/2)
 lbound = pop_ideal-(deviation*pop_ideal/2)
-pop_bound = c(lbound,ubound); pop_bound
+pop_bound = c(lbound,ubound); pop_bound #[711494, 755504] for total population
 balance_check = numeric(13)
 pop = numeric(13)
 for (i in 1:13) {
@@ -234,7 +234,7 @@ for (i in 1:13) {
 balance_check
 pop
 sum(pop)
-sum(pop1)
+sum(pop1) #sum(pop1) = 9535483
 sort(unique(NCData$district))
 length(NCData$district)
 unique(NCData$district)
@@ -247,7 +247,84 @@ setdiff(NCData$unitID, NC2012shp$GEOID10)
 sum(NCData$unitID==NC2012shp$GEOID10)
 # These codes are the same and they are already in the same order
 NCData$area = NC2012shp$AREA
+# To save without geometry
 save(NCData,file="NCData.RData")
-# To add geometry
-#NCData$geometry = NC2012shp$geometry
 
+# To add geometry to existing file - can just run from here and run very
+# beginning that loads NC2012shp
+load("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCData.RData")
+NCDataGeom = NCData
+setdiff(NCDataGeom$unitID,NC2012shp$GEOID10)
+sum(NCDataGeom$unitID==NC2012shp$GEOID10)
+# UnitIDs are equal and in the same order.
+
+# Investigate area
+sum(NCDataGeom$area)
+# appears to be in metres^2 - divide by 1000^2 to get in km sq
+sum(round(NCDataGeom$area/(1000^2),2))
+NCDataGeom$area = round(NCDataGeom$area/(1000^2),2)
+sum(NCDataGeom$area)
+NCDataGeom$area[1]
+
+# To test centroids with county 37001
+# plot(NC2012shp$geometry[which(NCDataGeom$county==37001)])
+# centroids = st_centroid(NC2012shp$geometry[which(NCDataGeom$county==37001)])
+# plot(centroids, add=T,pch=19)
+# str(centroids)
+# centroids = matrix(unlist(centroids), ncol = 2, byrow = TRUE)
+# centroidx = centroids[,1]
+# centroidy = centroids[,2]
+# points(centroidx,centroidy, pch=19, col="red")
+# Not sure what points intplat intplon give?
+#points(NC2012shp$INTPTLAT10[1:20],NC2012shp$INTPTLON10[1:20])
+
+# Centroids for the entire data frame
+centroids = st_centroid(NC2012shp$geometry)
+centroids = matrix(unlist(centroids), ncol = 2, byrow = TRUE)
+centroidx = centroids[,1]
+centroidy = centroids[,2]
+# Add to the data frame with geometry info
+NCDataGeom$centroidx = centroidx
+NCDataGeom$centroidy = centroidy
+NCDataGeom$geometry = NC2012shp$geometry
+
+# How does the centroid relate to the long lat
+NCDataGeom$centroidx[1:10]
+NCDataGeom$centroidy[1:10]
+NC2012shp$INTPTLAT10[1:10]
+NC2012shp$INTPTLON10[1:10]
+# xcoordinate is longitude and ycoordinate is latitude
+
+names(NCDataGeom)
+head(NCDataGeom)
+# Before saving add a name column
+NCDataGeom$name = 1:dim(NCDataGeom)[1]
+NCDataGeom = NCDataGeom[,c(dim(NCDataGeom)[2],1:(dim(NCDataGeom)[2]-1))]
+head(NCDataGeom)
+
+# To save complete NC shapefile
+save(NCDataGeom,file="NCDataGeom.RData")
+st_write(NCDataGeom,"NCDataGeom.shp", append=F)
+
+# Subset of districts 5,9,10,11,12
+NCDataSub = NCDataGeom
+unique(NCDataSub$district)
+index = which(NCDataSub$district!=5&
+                NCDataSub$district!=9&
+                NCDataSub$district!=10&
+                NCDataSub$district!=11&
+                NCDataSub$district!=12)
+NCDataSub = NCDataSub[-index,]
+unique(NCDataSub$district)
+NCDataSub$name = 1:dim(NCDataSub)[1]
+# Re-label the districts
+NCDataSub$district[which(NCDataSub$district==5)] = 1
+NCDataSub$district[which(NCDataSub$district==9)] = 4
+NCDataSub$district[which(NCDataSub$district==10)] = 3
+NCDataSub$district[which(NCDataSub$district==11)] = 2
+NCDataSub$district[which(NCDataSub$district==12)] = 5
+
+unique(NCDataSub$district)
+
+save(NCDataSub,file="NCDataSub.RData")
+st_write(NCDataSub,"NCDataSub.shp", append=F)

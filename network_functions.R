@@ -1,5 +1,7 @@
 # Network setup function
 library(igraph)
+library(redist)
+library(sf)
 f.adjm.sq = function(n) {
   nodes = n^2
   adjm = matrix(0, nodes, nodes)
@@ -20,27 +22,45 @@ f.adjm.hex = function(n) {
 # A function for coercing adjacency matrix into a 2 column matrix
 f.edges = function(adjm) {
   nodes = dim(adjm)[1]
-  edges = c(2,1)
-  for (i in 3:nodes) {
+  edges = c(NA,NA)
+  for (i in 1:nodes) {
     v2=which(adjm[i,]==1)
     v1=rep(i,length(v2))
-    X = cbind(v1, v2); X
+    X = cbind(v1, v2)
     edges = rbind(edges, X)
   }
-  edges = as.data.frame(edges)
+  edges = as.data.frame(edges[-1,])
   row.names(edges) = NULL
   edges
 }
+# old code
+# f.edges = function(adjm) {
+#   nodes = dim(adjm)[1]
+#   edges = c(2,1)
+#   for (i in 3:nodes) {
+#     v2=which(adjm[i,]==1)
+#     v1=rep(i,length(v2))
+#     X = cbind(v1, v2)
+#     edges = rbind(edges, X)
+#   }
+#   edges = as.data.frame(edges)
+#   row.names(edges) = NULL
+#   edges
+# }
 
 f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
-  # graph_type = 0,1,2,3 for real map, sq, hex, NCdummydata respectively.
+  # graph_type = 0,1,2,3,4,5 for real map, sq, hex, NCdummy, NCreal, NCsub.
   if (graph_type == 0) {
     nodes = 26
+  } else if (graph_type == 4) {
+    nodes = 2692
+  } else if (graph_type == 5) {
+    nodes = 1060
   } else {
-    nodes = grid_size^2 # grid_size is 51 for the NC data
+    nodes = grid_size^2 # grid_size is 51 for the NCdummydata
   }
   
-  if (grid == 3) {
+  if (graph_type == 3) {
     load("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCData.RData")
     P.data = NCData[order(NCData$district),]
     set.seed(1)
@@ -50,7 +70,14 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
     row.names(P.data) = NULL
     P.data$name = 1:dim(P.data)[1]
     P.data = P.data[,c(dim(P.data)[2],1:(dim(P.data)[2]-1))]
-    
+  } else if (graph_type == 4) {
+    NCshp = st_read("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCDataGeom.shp")
+    P.data = as.data.frame(NCshp)
+    P.data = P.data[,-dim(P.data)[2]]
+  } else if (graph_type == 5) {
+    NCshp = st_read("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCDataSub.shp")
+    P.data = as.data.frame(NCshp)
+    P.data = P.data[,-dim(P.data)[2]]
   } else {
     district0 = rep(Ndist,nodes)
     district0 = replace(district0, 1:(Ndist*floor(nodes/Ndist)),
@@ -58,10 +85,13 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
     county = rep(Ncounty,nodes)
     county = replace(county, 1:(Ncounty*floor(nodes/Ncounty)),
                      rep(1:Ncounty, each=(nodes/Ncounty)))
-    P.data = data.frame(unitID = 1:nodes, population = rep(1, nodes),
-                        blue = sample(1:5,nodes,replace = T), 
+    P.data = data.frame(name = 1:nodes, unitID = 1:nodes, county=county,
+                        blue = sample(1:5,nodes,replace = T),
                         red = sample(1:5,nodes,replace = T),
-                        district = district0, county=county, area=rep(2.6,nodes))
+                        population = rep(1, nodes),
+                        district = district0,  area=rep(2.6,nodes),
+                        centroidx = c(1.5,2.5,3.5,4.5,1,2,3,4,0.5,1.5,2.5,3.5,0,1,2,3), 
+                        centroidy = rep(0:3,each=4))
   }
 
   if (graph_type == 0) {
@@ -71,17 +101,27 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
     adjm = realmap
   } else if (graph_type == 1) {
     adjm = f.adjm.sq(grid_size)
+  } else if (graph_type == 4 | graph_type == 5) {
+    adjlist = redist.adjacency(NCshp)
+    adjm = matrix(0, nrow=length(adjlist),ncol=length(adjlist))
+    for (i in 1:length(adjlist)) {
+      unlist = adjlist[[i]]+1
+      unlist = unlist[which(unlist>i)]
+      for (j in 1:length(unlist)) {
+        adjm[i,unlist[j]] = 1
+      }
+    }
   } else {
     adjm = f.adjm.hex(grid_size)
   }
   E.data = f.edges(adjm)
-  class(E.data)
   E.data$weight = rep(1, dim(E.data)[1])
   # I now have two data frames - one containing precinct data and one containing 
   # edge connections and edge lengths.
   # Make the graph object
   g = graph_from_data_frame(E.data, directed = FALSE, 
                             vertices=P.data)
+  
 }
 
 # Function to determine which vertices are on the perimeter - add a perimeter 

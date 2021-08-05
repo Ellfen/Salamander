@@ -64,8 +64,17 @@ f.is.balanced = function(distID, G, district, bound, pop_ideal) {
   is.balanced
 }
 
-f.popscore = function(G,district,pop_ideal){
-  Ndist = length(unique(district))-1
+f.contigscore = function(G,district,Ndist) {
+  contiguous_check = numeric(Ndist)
+  for (i in 1:Ndist) {
+    contiguous_check[i] = f.is.contigous1(i,G,district)
+  }
+  Jg = 1/sum(contiguous_check)
+  Jg
+}
+
+f.popscore = function(G,district,pop_ideal,Ndist){
+  #Ndist = length(unique(district))-1
   pop_dist = numeric(Ndist)
   for (i in 1:Ndist) {
     pop_dist[i] = sum(vertex_attr(G,"population")[which(district==i)])
@@ -78,11 +87,11 @@ f.popscore = function(G,district,pop_ideal){
 # Function to calculate score, Jc, to measure how many counties are split across
 # two or more districts.
 # Mc is a large constant
-f.countyscore = function(G,district,Mc) {
+f.countyscore = function(G,district,Mc,Ncounty) {
   # initiate the values
   split2 = 0; split3 = 0; W2 = 0; W3 = 0
   # get the number of counties
-  Ncounty = length(unique(V(G)$county))-1
+  # Ncounty = length(unique(V(G)$county))-1
   for (i in 1:Ncounty) {
     # table of how many county vertices are contained across districts
     county_districts = table(district[which(V(G)$county==i)])
@@ -106,9 +115,46 @@ f.countyscore = function(G,district,Mc) {
   Jc
 }
 
+f.distance = function(x1,x2,y1,y2) {
+  lat1 = y1/(180/pi)
+  lat2 = y2/(180/pi)
+  long1 = x1/(180/pi)
+  long2 = x2/(180/pi)
+  d_mi = 3963*acos((sin(lat1)*sin(lat2))+cos(lat1)*cos(lat2)*cos(long2-long1))
+  d_km = 1.609344*d_mi
+  d_km
+}
+
+f.roeck = function(G,district,Ndist,graph_type) {
+  #Ndist = length(unique(district))-1
+  roeck = numeric(Ndist)
+  for (i in 1:Ndist) {
+
+    if (graph_type == 4 | graph_type == 5) {
+      xy = cbind(V(g)$centroidx[which(district==i)],
+                 V(g)$centroidy[which(district==i)])
+      minmax_x = rbind(xy[which(xy[,1]==min(xy[,1])),],
+                       xy[which(xy[,1]==max(xy[,1])),])
+      minmax_y = rbind(xy[which(xy[,2]==min(xy[,2])),],
+                       xy[which(xy[,2]==max(xy[,2])),])
+      dx = f.distance(minmax_x[1,1],minmax_x[2,1],minmax_x[1,2],minmax_x[2,2])
+      dy = f.distance(minmax_y[1,1],minmax_y[2,1],minmax_y[1,2],minmax_y[2,2])
+    } else {
+      dx = abs(max(V(g)$centroidx)-min(V(g)$centroidx))
+      dy = abs(max(V(g)$centroidy)-min(V(g)$centroidy))
+    }
+    
+    Acircle = (max(dx,dy)/2)^2*pi
+    Adistrict = sum(V(g)$area[which(district==i)])
+    roeck[i] = Acircle/Adistrict
+  }
+  Ji = sum(roeck)
+  Ji
+}
+
 # Compactness score
-f.compactscore = function(G,district,p1,p2) {
-  Ndist = length(unique(district))-1
+f.compactscore = function(G,district,p1,p2,Ndist) {
+  #Ndist = length(unique(district))-1
   boundary = area = numeric(Ndist)
   #print(boundary)
   #print(area)

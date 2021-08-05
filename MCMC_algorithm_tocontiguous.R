@@ -1,4 +1,7 @@
-# The aim of this script to find wp (the population score weighting)
+# The aim of this script is to run 40,000 steps with beta=0
+# It does not matter the outcome of any of the score functions as they will 
+# equal 1 however useful to still calculate and store to get idea of what
+# outcome is for indiscriminant flip walk.
 ######################## IMPORT FUNCTIONS AND LIBRARIES ########################
 library(igraph)
 library(tictoc)
@@ -18,7 +21,7 @@ Ncounty = 100
 grid = 4
 gplot = f.graph(n,grid,Ndist,Ncounty)
 nodes = vcount(gplot)
-g = f.perimeter(gplot,nodes)
+g = gplot #f.perimeter(gplot,nodes)
 
 # Setup the plotting information
 V(gplot)$size = 10
@@ -42,15 +45,14 @@ if (grid == 0) {
   graph_attr(gplot,"layout") = layout_on_grid(gplot, width = n, height = n, 
                                               dim = 2)
 }
-vcolor = c("red","violetred1","purple3","slateblue","navy","royalblue",
-           "skyblue2","turquoise3","seagreen","olivedrab2","gold",
-           "darkorange","chocolate3")
+vcolor = c("red","violetred1","deeppink3","purple","navy","royalblue",
+           "deepskyblue","turquoise3","seagreen","olivedrab2","gold",
+           "darkorange1","orange")
 
 graph_attr(gplot,"margin") = rep(0.01,4)
 par(mar=c(0.5,0.5,0.5,0.5)+0.1)
 plot(gplot, vertex.color=vcolor[get.vertex.attribute(g,"district")], 
-     vertex.frame.color=vcolor[get.vertex.attribute(g,"district")],
-     edge.color=get.edge.attribute(g,"p1"))
+     vertex.frame.color=vcolor[get.vertex.attribute(g,"district")])
 
 # The edgelist won't change so create it now
 Elist = get.edgelist(g)
@@ -58,7 +60,7 @@ class(Elist) = "numeric"
 E(g)$p1 = V(g)$district[Elist[,1]]
 E(g)$p2 = V(g)$district[Elist[,2]]
 # Make a note of which edges are perimeter edges
-Eint = min(which(Elist[,2]==nodes+1))
+# Eint = min(which(Elist[,2]==nodes+1))
 ################################ CONSTANTS #####################################
 # population constants
 pop_ideal = sum(vertex_attr(g,"population"))/Ndist
@@ -72,9 +74,10 @@ Mc = 10
 wp = 0
 wc = 0
 wi = 0
+wg = 0
 # temperature
-beta = 1
-###################### DOES INITIAL DISTRICT OBEY POP BALANCE #################
+beta = 0
+#################### DOES INITIAL DISTRICT OBEY POP BALANCE ####################
 balance_check = numeric(Ndist)
 for (i in 1:Ndist) {
   pop = sum(vertex_attr(g,"population")[which(V(g)$district==i)])
@@ -82,12 +85,24 @@ for (i in 1:Ndist) {
   balance_check[i] = ifelse(pop_bound[2] >= pop & pop >= pop_bound[1], 1, 0)
 }
 balance_check
+##################### IS INITIAL DISTRICTING CONTIGUOUS ########################
+contigous_check = numeric(Ndist)
+for (i in 1:Ndist) {
+  contigous_check[i] = f.is.contigous1(i,g,V(g)$district)
+}
+contigous_check
+Jg = 1/sum(contigous_check)
+f.contigscore(g,V(g)$district,Ndist)
+# Add edges to connect back to district?
 ############################## BOUNDARY FLIP ##################################
 plot(gplot, vertex.color=vcolor[V(g)$district], 
      vertex.frame.color=vcolor[V(g)$district],
      edge.color=vcolor[get.edge.attribute(g,"p1")])
 # step 1 - vector of conflicting edges
-conflict_x = which(E(g)$p1[1:(Eint-1)] != E(g)$p2[1:Eint-1])
+conflict_x = which(E(g)$p1[which(E(g)$p1==1|E(g)$p1==4|E(g)$p1==6|E(g)$p1==10
+                           |E(g)$p1==13)] 
+                   != E(g)$p2[which(E(g)$p1==1|E(g)$p1==4|E(g)$p1==6|E(g)$p1==10
+                              |E(g)$p1==13)])
 # sample uniformly from all conflicting edges
 c.edge = sample(conflict_x,1)
 # choose with p=0.5 which vertex to flip (only a choice of two)
@@ -145,16 +160,21 @@ if (U <= alpha){
 }
 
 # Boundary flip in a loop
-N = 10
+N = 100
 # is balanced check
-balanced = accepted = admissible = Jpx = Jpy = numeric(N)
+balanced = accepted = admissible = numeric(N)
+Jgx = Jpx = Jcx = Jix = Jgy = Jpy = Jcy = Jiy  = numeric(N)
+
 
 tic()
 for (i in 1:N) {
   print(i)
   ################################ FLIP WALK ##################################
   # step 1 - vector of conflicting edges
-  conflict_x = which(E(g)$p1[1:(Eint-1)] != E(g)$p2[1:Eint-1])
+  conflict_x = which(E(g)$p1[which(E(g)$p1==1|E(g)$p1==4|E(g)$p1==6|E(g)$p1==10
+                                   |E(g)$p1==13)] 
+                     != E(g)$p2[which(E(g)$p1==1|E(g)$p1==4|E(g)$p1==6
+                                      |E(g)$p1==10|E(g)$p1==13)])
   # sample uniformly from all conflicting edges
   c.edge = sample(conflict_x,1)
   # choose with p=0.5 which vertex to flip (only a choice of two)
@@ -169,10 +189,11 @@ for (i in 1:N) {
   temp_dist = V(g)$district
   temp_p1 = E(g)$p1
   temp_p2 = E(g)$p2
+  Jgx[i] = f.contigscore(g,temp_dist,Ndist)
   Jpx[i] = f.popscore(g,temp_dist,pop_ideal)
-  Jcx = f.countyscore(g,temp_dist,Mc)
-  Jix = f.compactscore(g,temp_dist,temp_p1,temp_p2)
-  score_x = exp(-beta*(wp*Jpx[i]+wc*Jcx+wi*Jix))
+  Jcx[i] = f.countyscore(g,temp_dist,Mc)
+  Jix[i] = f.compactscore(g,temp_dist,temp_p1,temp_p2)
+  score_x = exp(-beta*(wg*Jgx[i]+wp*Jpx[i]+wc*Jcx[i]+wi*Jix[i]))
   temp_dist[v.flip] = dist_y
   temp_p1[which(Elist[,1]==v.flip)] = temp_dist[v.flip]
   temp_p2[which(Elist[,2]==v.flip)] = temp_dist[v.flip]
@@ -181,18 +202,31 @@ for (i in 1:N) {
   # Check if proposal is balanced
   balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
   admissible[i] = as.integer(contigous1)# & balanced)
+  Jgy[i] = f.contigscore(g,temp_dist,Ndist)
   Jpy[i] = f.popscore(g,temp_dist,pop_ideal)
-  Jcy = f.countyscore(g,temp_dist,Mc)
-  Jiy = f.compactscore(g,temp_dist,temp_p1,temp_p2)
-  score_y = exp(-beta*(wp*Jpy[i]+wc*Jcy+wi*Jiy))
+  Jcy[i] = f.countyscore(g,temp_dist,Mc)
+  Jiy[i] = f.compactscore(g,temp_dist,temp_p1,temp_p2)
+  score_y = exp(-beta*(wg[i]*Jgy+wp*Jpy[i]+wc*Jcy+wi*Jiy))
   # Calculate the acceptance function - using uniform score for now
   Qxy = f.Q(conflict_x)
-  conflict_y = which(temp_p1[1:(Eint-1)] != temp_p2[1:(Eint-1)])
+  conflict_y = which(temp_p1 != temp_p2)
   Qyx = f.Q(conflict_y)
-  alpha = f.alpha(Qxy,Qyx,score_x,score_y,admissible[i])
+  alpha = f.alpha(Qxy,Qyx,1,1,contigous1)
   # generate a uniform random variable
   U = runif(1)
   accepted[i] = ifelse(U <= alpha, 1, 0)
+  
+  # Print some outputs for diagnostic
+  if (N == 1) {
+    cat("edge =",Elist[c.edge,],"v.flip =",v.flip,"contig =",contigous1, 
+        "balanced =",balanced,"admissible =",admissible, 
+        "U =",round(U,3),"alpha =",round(alpha,3),sep=" ","\n")
+    cat("Jpx=",round(Jpx,5),"Jcx=",round(Jcx,3),"Jix=",round(Jix,3),
+        "score_x=",score_x,"\n",
+        "Jpy=",round(Jpy,5),"Jcy=",round(Jcy,3),"Jiy=",round(Jiy,3),
+        "score_y=",score_y,sep=" ","\n")
+  }
+
   # Accept or reject proposal
   if (U <= alpha){
     V(g)$district[v.flip] = dist_y
@@ -206,8 +240,10 @@ for (i in 1:N) {
   ##########################################################################
 }
 toc()
-# 6675 secs for 10000, 111 minutes, approx 2 hours
-# Store info on how many admissible and how many accepted!
+
+Jgy
+accepted
+
 balanced
 mean(balanced)
 mean(balanced[1:500])

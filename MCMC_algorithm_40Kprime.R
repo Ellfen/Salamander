@@ -1,4 +1,7 @@
-# The aim of this script to find wp (the population score weighting)
+# The aim of this script is to run 40,000 steps with beta=0
+# It does not matter the outcome of any of the score functions as they will 
+# equal 1 however useful to still calculate and store to get idea of what
+# outcome is for indiscriminant flip walk.
 ######################## IMPORT FUNCTIONS AND LIBRARIES ########################
 library(igraph)
 library(tictoc)
@@ -73,8 +76,8 @@ wp = 0
 wc = 0
 wi = 0
 # temperature
-beta = 1
-###################### DOES INITIAL DISTRICT OBEY POP BALANCE #################
+beta = 0
+#################### DOES INITIAL DISTRICT OBEY POP BALANCE ####################
 balance_check = numeric(Ndist)
 for (i in 1:Ndist) {
   pop = sum(vertex_attr(g,"population")[which(V(g)$district==i)])
@@ -82,6 +85,13 @@ for (i in 1:Ndist) {
   balance_check[i] = ifelse(pop_bound[2] >= pop & pop >= pop_bound[1], 1, 0)
 }
 balance_check
+##################### IS INITIAL DISTRICTING CONTIGUOUS ########################
+contigous_check = numeric(Ndist)
+for (i in 1:Ndist) {
+  contigous_check[i] = f.is.contigous1(i,g,V(g)$district)
+}
+contigous_check
+# Add edges to connect back to district?
 ############################## BOUNDARY FLIP ##################################
 plot(gplot, vertex.color=vcolor[V(g)$district], 
      vertex.frame.color=vcolor[V(g)$district],
@@ -169,27 +179,27 @@ for (i in 1:N) {
   temp_dist = V(g)$district
   temp_p1 = E(g)$p1
   temp_p2 = E(g)$p2
-  Jpx[i] = f.popscore(g,temp_dist,pop_ideal)
-  Jcx = f.countyscore(g,temp_dist,Mc)
-  Jix = f.compactscore(g,temp_dist,temp_p1,temp_p2)
-  score_x = exp(-beta*(wp*Jpx[i]+wc*Jcx+wi*Jix))
+  # Jpx[i] = f.popscore(g,temp_dist,pop_ideal)
+  # Jcx = f.countyscore(g,temp_dist,Mc)
+  # Jix = f.compactscore(g,temp_dist,temp_p1,temp_p2)
+  # score_x = exp(-beta*(wp*Jpx[i]+wc*Jcx+wi*Jix))
   temp_dist[v.flip] = dist_y
   temp_p1[which(Elist[,1]==v.flip)] = temp_dist[v.flip]
   temp_p2[which(Elist[,2]==v.flip)] = temp_dist[v.flip]
   # Check if proposal is contigous
   contigous1 = f.is.contigous1(dist_x,g,temp_dist)
   # Check if proposal is balanced
-  balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
-  admissible[i] = as.integer(contigous1)# & balanced)
-  Jpy[i] = f.popscore(g,temp_dist,pop_ideal)
-  Jcy = f.countyscore(g,temp_dist,Mc)
-  Jiy = f.compactscore(g,temp_dist,temp_p1,temp_p2)
-  score_y = exp(-beta*(wp*Jpy[i]+wc*Jcy+wi*Jiy))
+  # balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
+  # admissible[i] = as.integer(contigous1)# & balanced)
+  # Jpy[i] = f.popscore(g,temp_dist,pop_ideal)
+  # Jcy = f.countyscore(g,temp_dist,Mc)
+  # Jiy = f.compactscore(g,temp_dist,temp_p1,temp_p2)
+  # score_y = exp(-beta*(wp*Jpy[i]+wc*Jcy+wi*Jiy))
   # Calculate the acceptance function - using uniform score for now
   Qxy = f.Q(conflict_x)
   conflict_y = which(temp_p1[1:(Eint-1)] != temp_p2[1:(Eint-1)])
   Qyx = f.Q(conflict_y)
-  alpha = f.alpha(Qxy,Qyx,score_x,score_y,admissible[i])
+  alpha = f.alpha(Qxy,Qyx,1,1,contigous1)
   # generate a uniform random variable
   U = runif(1)
   accepted[i] = ifelse(U <= alpha, 1, 0)
@@ -206,8 +216,6 @@ for (i in 1:N) {
   ##########################################################################
 }
 toc()
-# 6675 secs for 10000, 111 minutes, approx 2 hours
-# Store info on how many admissible and how many accepted!
 balanced
 mean(balanced)
 mean(balanced[1:500])

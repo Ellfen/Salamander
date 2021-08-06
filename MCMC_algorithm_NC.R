@@ -124,7 +124,7 @@ legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
 
 # set.seed(1412)
 # Boundary flip in a loop
-N = 400
+N = 40000
 # information to store
 balanced = accepted = admissible = numeric(N)
 Jpx = Jpy = Jcx = Jcy = Jix = Jiy = numeric(N)
@@ -221,7 +221,17 @@ mean(Jcy)
 mean(Jix)
 mean(Jiy)
 
+Jix[1:10]
+Jix[3900:3910]
 
+# save the new district info
+load("data_cleaning/NCDataSub.RData")
+NCData40KSteps = NCDataSub
+NCData40KSteps$district = V(g)$district
+head(NCData40KSteps$district)
+head(NCDataSub$district)
+save(NCData40KSteps, file="data_cleaning/NCData40KSteps.RData")
+st_write(NCData40KSteps,"data_cleaning/NCData40KSteps.shp",append=F)
 # png("grid.png")
 # plot(gplot, vertex.color=V(g)$district, vertex.frame.color=V(g)$district)
 # dev.off(); graphics.off()

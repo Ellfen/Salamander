@@ -71,11 +71,11 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
     P.data$name = 1:dim(P.data)[1]
     P.data = P.data[,c(dim(P.data)[2],1:(dim(P.data)[2]-1))]
   } else if (graph_type == 4) {
-    NCshp = st_read("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCDataGeom.shp")
+    NCshp = st_read("data_cleaning/NCDataGeom.shp")
     P.data = as.data.frame(NCshp)
     P.data = P.data[,-dim(P.data)[2]]
   } else if (graph_type == 5) {
-    NCshp = st_read("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCDataSub.shp")
+    NCshp = st_read("data_cleaning/NCDataSub.shp")
     P.data = as.data.frame(NCshp)
     P.data = P.data[,-dim(P.data)[2]]
   } else {

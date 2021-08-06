@@ -54,6 +54,7 @@ if (grid == 0) {
                                                     spring.constant = 1)
 } else if (grid == 4 | grid == 5 | grid == 2) {
   graph_attr(gplot,"layout") = cbind(V(gplot)$centroidx,V(gplot)$centroidy)
+  #l = cbind(V(gplot)$centroidx,V(gplot)$centroidy)
 } else {
   graph_attr(gplot,"layout") = layout_on_grid(gplot, width = n, height = n, 
                                               dim = 2)
@@ -69,10 +70,15 @@ vcolor = c("turquoise3","gold","olivedrab3","royalblue","darkorange","grey","red
 
 
 graph_attr(gplot,"margin") = rep(0.01,4)
-par(mar=c(0.5,0.5,0.5,0.5)+0.1,mfrow=c(1,1))
+par(mar=c(2,0,2,0)+0.1,mfrow=c(1,1))
 plot(gplot, vertex.color=vcolor[get.vertex.attribute(g,"district")], 
-     vertex.frame.color=vcolor[get.vertex.attribute(g,"district")])
-
+     vertex.frame.color=vcolor[get.vertex.attribute(g,"district")],
+     asp=0)
+axis(1)
+axis(2,pos=-1)
+abline(h=1)
+abline(h=-1)
+abline(h=0)
 # The edgelist won't change so create it now
 Elist = get.edgelist(g)
 class(Elist) = "numeric"
@@ -114,12 +120,14 @@ contigous_check
 # internal edges are color - conflicting edges are grey
 edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
 district = V(g)$district
-par(mfrow=c(2,2),mar=c(0.5,0.5,1.5,0.5)+0.1)
-plot(gplot, vertex.color=vcolor[district], 
+par(mfrow=c(2,2),mar=c(2,1.3,2,0.5)+0.1)
+plot(gplot, asp=1, vertex.color=vcolor[district], 
      vertex.frame.color=vcolor[district],
      edge.color=vcolor[edge_color], main="Initial Districting")
-legend("right",legend=c("District 1","District 2", "District 3"),
+legend("topright",legend=c("District 1","District 2", "District 3"),
        col=vcolor[1:3],pch=19,bty="n")
+axis(1)
+axis(2,pos=-1.1)
 
 a = c(1525,1527,1528)
 for (j in 1:3) {
@@ -203,13 +211,27 @@ toc()
 edge_color[c.edge] = 7
 frame_color = V(g)$district
 frame_color[v.flip] = 7
-plot(gplot, vertex.color=vcolor[district], 
+plot(gplot,asp=1, vertex.color=vcolor[district], 
      vertex.frame.color=vcolor[frame_color],
      edge.color=vcolor[edge_color], main=paste("Run",j,sep=" "))
 edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
 district = V(g)$district
 }
-
+library(plotrix)
+par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
+plot(-1:12,-1:12,type="n")
+d1 = data.frame(point.x = c(6,7.5,9,10.5,4.5), point.y=c(2,3,4,5,3))
+d2 = data.frame(point.x = c(6,7.5,9,3,4.5), point.y=c(4,5,6,4,5))  
+d3 = data.frame(point.x = c(6,7.5,1.5,3,4.5,6), point.y=c(6,7,5,6,7,8))
+points(d1,pch=19,col=vcolor[1])
+points(d2,pch=19,col=vcolor[2])
+points(d3,pch=19,col=vcolor[3])
+draw.circle(getMinCircle(d1)$ctr[1],getMinCircle(d1)$ctr[2],
+            getMinCircle(d1)$rad,border=vcolor[1])
+draw.circle(getMinCircle(d2)$ctr[1],getMinCircle(d2)$ctr[2],
+            getMinCircle(d2)$rad,border=vcolor[2])
+draw.circle(getMinCircle(d3)$ctr[1],getMinCircle(d3)$ctr[2],
+            getMinCircle(d3)$rad,border=vcolor[3])
 # Store info on how many admissible and how many accepted!
 balanced
 mean(balanced)

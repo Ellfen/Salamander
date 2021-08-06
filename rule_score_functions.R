@@ -1,4 +1,5 @@
 # This script contains all rule check functions and score functions
+library(shotGroups)
 
 f.is.contigous1 = function(distID, G, district) {
   block = induced_subgraph(g,which(district==distID))
@@ -130,21 +131,25 @@ f.roeck = function(G,district,Ndist,graph_type) {
   roeck = numeric(Ndist)
   for (i in 1:Ndist) {
 
-    if (graph_type == 4 | graph_type == 5) {
-      xy = cbind(V(g)$centroidx[which(district==i)],
-                 V(g)$centroidy[which(district==i)])
-      minmax_x = rbind(xy[which(xy[,1]==min(xy[,1])),],
-                       xy[which(xy[,1]==max(xy[,1])),])
-      minmax_y = rbind(xy[which(xy[,2]==min(xy[,2])),],
-                       xy[which(xy[,2]==max(xy[,2])),])
-      dx = f.distance(minmax_x[1,1],minmax_x[2,1],minmax_x[1,2],minmax_x[2,2])
-      dy = f.distance(minmax_y[1,1],minmax_y[2,1],minmax_y[1,2],minmax_y[2,2])
-    } else {
-      dx = abs(max(V(g)$centroidx)-min(V(g)$centroidx))
-      dy = abs(max(V(g)$centroidy)-min(V(g)$centroidy))
-    }
+    # if (graph_type == 4 | graph_type == 5) {
+    #   xy = cbind(V(g)$centroidx[which(district==i)],
+    #              V(g)$centroidy[which(district==i)])
+    #   minmax_x = rbind(xy[which(xy[,1]==min(xy[,1])),],
+    #                    xy[which(xy[,1]==max(xy[,1])),])
+    #   minmax_y = rbind(xy[which(xy[,2]==min(xy[,2])),],
+    #                    xy[which(xy[,2]==max(xy[,2])),])
+    #   dx = f.distance(minmax_x[1,1],minmax_x[2,1],minmax_x[1,2],minmax_x[2,2])
+    #   dy = f.distance(minmax_y[1,1],minmax_y[2,1],minmax_y[1,2],minmax_y[2,2])
+    # } else {
+    #   dx = abs(max(V(g)$centroidx)-min(V(g)$centroidx))
+    #   dy = abs(max(V(g)$centroidy)-min(V(g)$centroidy))
+    # }
     
-    Acircle = (max(dx,dy)/2)^2*pi
+    xy = cbind(V(g)$centroidx[which(district==i)],
+               V(g)$centroidy[which(district==i)])
+    
+    r = getMinCircle(xy)$rad
+    Acircle = r^2*pi #(max(dx,dy)/2)^2*pi
     Adistrict = sum(V(g)$area[which(district==i)])
     roeck[i] = Acircle/Adistrict
   }

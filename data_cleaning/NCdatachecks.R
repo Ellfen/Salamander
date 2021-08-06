@@ -1,5 +1,6 @@
 # Import Library for reading shapefiles
 library(sf)
+library(SpatialEpi)
 # Load the shapefile for NC used in 2012 Elections
 NC2012shp = st_read("/Users/laura/Documents/MATH5871_Dissertation/Programming/Data/US/NC/tl_2012_37_vtd10/tl_2012_37_vtd10.shp")
 # The 2011 shapefile is for districts only (ie. dimensions 13x2)
@@ -281,6 +282,14 @@ NCDataGeom$area[1]
 # Centroids for the entire data frame
 centroids = st_centroid(NC2012shp$geometry)
 centroids = matrix(unlist(centroids), ncol = 2, byrow = TRUE)
+# How does the centroid relate to the long lat
+centroids[1:10,]
+NC2012shp$INTPTLAT10[1:10]
+NC2012shp$INTPTLON10[1:10]
+# it goes long lat
+centroids = latlong2grid(centroids)
+head(centroids)
+
 centroidx = centroids[,1]
 centroidy = centroids[,2]
 # Add to the data frame with geometry info
@@ -288,12 +297,6 @@ NCDataGeom$centroidx = centroidx
 NCDataGeom$centroidy = centroidy
 NCDataGeom$geometry = NC2012shp$geometry
 
-# How does the centroid relate to the long lat
-NCDataGeom$centroidx[1:10]
-NCDataGeom$centroidy[1:10]
-NC2012shp$INTPTLAT10[1:10]
-NC2012shp$INTPTLON10[1:10]
-# xcoordinate is longitude and ycoordinate is latitude
 
 names(NCDataGeom)
 head(NCDataGeom)

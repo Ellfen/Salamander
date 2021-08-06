@@ -8,70 +8,70 @@ library(igraph)
 source("../network_functions.R")
 
 ############################ SETUP THE NETWORK ################################
-# Wrap this up in a function as you use it at the start of every program.
-# The input will be 0,1,2 for graph_type.
-# select grid = 0,1,2,3,4 for real map, sq, hex respectively.
+# select grid = 0,1,2,3,4,5 for real map, sq, hex, NCdummy, NCreal, NCsub
 grid = 5
-n = sqrt(1060)
-Ndist = 5
-Ncounty = 100
+if (grid == 5) {
+  n = sqrt(1060)
+  Ndist = 5
+  Ncounty = 38 
+} else if (grid == 2) {
+  n = 4
+  Ndist = 3
+  Ncounty = 4
+} else {
+  
+}
 
 gplot = f.graph(n,grid,Ndist,Ncounty)
+nodes = vcount(gplot)
 g = gplot
-g = induced_subgraph(gplot,which(V(gplot)$district==5|
-                                   V(gplot)$district==10|
-                                   V(gplot)$district==11|
-                                   V(gplot)$district==9|
-                                   V(gplot)$district==12)) #f.perimeter(gplot,nodes)
-nodes = vcount(g)
+# Do not add perimeter info
+# g = f.perimeter(gplot,nodes)
 
-V(g)$district[which(V(g)$name=="408")] = 5
-V(g)$district[which(V(g)$name=="419")] = 5
-V(g)$district[which(V(g)$name=="429")] = 5
-V(g)$district[which(V(g)$name=="432")] = 5
-
-#district = c(1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4) #c(1,1,2,2,1,1,2,2,3,3,4,4,3,3,4,4)
-#V(g)$district = district
-district = V(g)$district
+# Absorb discontiguous nodes
+if (grid == 5) {
+  V(g)$district[which(V(g)$name=="197")] = 1
+  V(g)$district[which(V(g)$name=="208")] = 1
+  V(g)$district[which(V(g)$name=="221")] = 1
+  V(g)$district[which(V(g)$name=="218")] = 1
+}
 
 # Setup the plotting information
-V(g)$size = 10
+V(gplot)$size = 15
+V(gplot)$label = V(gplot)$county
 if (n > 20) {
-  V(g)$size = 2 # Reduce size of the nodes
-  V(g)$label = NA #V(g)$name # Do not print labels
+  V(gplot)$size = 2 # Reduce size of the nodes
+  V(gplot)$label = NA # Do not print labels
 }
 
 if (grid == 0) {
-  graph_attr(g,"layout") = layout_with_graphopt(g, charge=0.0001, 
+  graph_attr(gplot,"layout") = layout_with_graphopt(gplot, charge=0.0001, 
                                                     mass=30,
                                                     spring.length = 0,
                                                     spring.constant = 1)
-  # layout_with_fr is another option worth exploring
-  # layout does not always give nice results - might to to do several iterations
-  # to get a good one. That completely avoids overlaps.
-} else if (grid == 4|grid==5) {
-  graph_attr(g,"layout") = layout=cbind(V(g)$centroidx,V(g)$centroidy)
+} else if (grid == 4 | grid == 5 | grid == 2) {
+  graph_attr(gplot,"layout") = cbind(V(gplot)$centroidx,V(gplot)$centroidy)
+  #l = cbind(V(gplot)$centroidx,V(gplot)$centroidy)
 } else {
-  graph_attr(g,"layout") = layout_on_grid(g, width = n, height = n, 
+  graph_attr(gplot,"layout") = layout_on_grid(gplot, width = n, height = n, 
                                               dim = 2)
 }
-vcolor = c("red","violetred1","deeppink3","purple","navy","royalblue",
-           "deepskyblue","turquoise3","seagreen","olivedrab2","gold",
-           "darkorange1","orange")
 
-# # Can I see the layout information
-# graph_attr_names(gplot)
-# graph_attr(gplot,"layout")
-# graph_attr(gplot,"layout")[,1]
-# V(g)$centroidx = graph_attr(gplot,"layout")[,1]
-# V(g)$centroidy = graph_attr(gplot, "layout")[,2]
+# vcolor = c("red","violetred1","deeppink3","purple","navy","royalblue",
+#              "deepskyblue","turquoise3","seagreen","olivedrab2","gold",
+#              "darkorange1","orange")
 
-graph_attr(g,"margin") = rep(0.01,4)
-par(mar=c(0.5,0.5,0.5,0.5)+0.1)
-plot(g, vertex.color=vcolor[get.vertex.attribute(g,"district")], 
-     vertex.frame.color=vcolor[get.vertex.attribute(g,"district")])
+vcolor = c("turquoise3","gold","olivedrab3","royalblue","darkorange","grey","red")
+#vshape = c("circle","square","rectangle","none")
 
-f.is.contigous1(11,g,district)
+
+
+graph_attr(gplot,"margin") = rep(0.01,4)
+par(mar=c(2,0,2,0)+0.1,mfrow=c(1,1))
+plot(gplot, vertex.color=vcolor[get.vertex.attribute(g,"district")], 
+     vertex.frame.color=vcolor[get.vertex.attribute(g,"district")],
+     asp=0)
+
 # The edgelist won't change so create it now
 Elist = get.edgelist(g)
 class(Elist) = "numeric"
@@ -79,6 +79,23 @@ E(g)$p1 = V(g)$district[Elist[,1]]
 E(g)$p2 = V(g)$district[Elist[,2]]
 # Make a note of which edges are perimeter edges
 # Eint = min(which(Elist[,2]==nodes+1))
+district=V(g)$district
+roeck=numeric(Ndist)
+for (i in 1:Ndist) {
+  xy = cbind(V(g)$centroidx[which(district==i)],
+             V(g)$centroidy[which(district==i)])
+  
+  r = getMinCircle(xy)$rad
+  Acircle = r^2*pi #(max(dx,dy)/2)^2*pi
+  Adistrict = sum(V(g)$area[which(district==i)])
+  roeck[i] = Acircle/Adistrict
+}
+roeck
+sum(roeck)
+
+
+
+
 
 f.distance = function(x1,x2,y1,y2) {
   lat1 = y1/(180/pi)

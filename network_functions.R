@@ -90,8 +90,8 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
                         red = sample(1:5,nodes,replace = T),
                         population = rep(1, nodes),
                         district = district0,  area=rep(2.6,nodes),
-                        centroidx = c(1.5,2.5,3.5,4.5,1,2,3,4,0.5,1.5,2.5,3.5,0,1,2,3), 
-                        centroidy = rep(0:3,each=4))
+                        centroidx = c(6,7.5,9,10.5,4.5,6,7.5,9,3,4.5,6,7.5,1.5,3,4.5,6), 
+                        centroidy = c(2,3,4,5,3,4,5,6,4,5,6,7,5,6,7,8))
   }
 
   if (graph_type == 0) {
@@ -116,6 +116,9 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
   }
   E.data = f.edges(adjm)
   E.data$weight = rep(1, dim(E.data)[1])
+                  #c(1.76,1.76,1.76,1.76,2,1.76,1.76,2,1.76,1.76,2,1.76,1.76,
+  #                   1.76,2,1.76,1.76,2,1.76,1.76,2,1.76,1.76,1.76,2,1.76,1.76,
+  #                   2,1.76,1.76,2,1.76,1.76)
   # I now have two data frames - one containing precinct data and one containing 
   # edge connections and edge lengths.
   # Make the graph object

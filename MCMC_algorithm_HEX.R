@@ -73,12 +73,8 @@ graph_attr(gplot,"margin") = rep(0.01,4)
 par(mar=c(2,0,2,0)+0.1,mfrow=c(1,1))
 plot(gplot, vertex.color=vcolor[get.vertex.attribute(g,"district")], 
      vertex.frame.color=vcolor[get.vertex.attribute(g,"district")],
-     asp=0)
-axis(1)
-axis(2,pos=-1)
-abline(h=1)
-abline(h=-1)
-abline(h=0)
+     asp=1)
+
 # The edgelist won't change so create it now
 Elist = get.edgelist(g)
 class(Elist) = "numeric"
@@ -126,8 +122,8 @@ plot(gplot, asp=1, vertex.color=vcolor[district],
      edge.color=vcolor[edge_color], main="Initial Districting")
 legend("topright",legend=c("District 1","District 2", "District 3"),
        col=vcolor[1:3],pch=19,bty="n")
-axis(1)
-axis(2,pos=-1.1)
+#axis(1)
+#axis(2,pos=-1.1)
 
 a = c(1525,1527,1528)
 for (j in 1:3) {

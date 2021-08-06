@@ -97,10 +97,10 @@ f.countyscore = function(G,district,Mc,Ncounty) {
   for (i in 1:Ncounty) {
     # table of how many county vertices are contained across districts
     county_districts = table(district[which(V(G)$county==c[i])])
-    print(county_districts)
+    #print(county_districts)
     # Across how many districts are the counties split
     splits = length(unique(district[which(V(G)$county==c[i])]))
-    print(splits)
+    #print(splits)
     # Loop to sum up 2- and 3-way splits and the weighting
     if (splits == 2) {
       split2 = split2+1

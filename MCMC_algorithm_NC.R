@@ -12,7 +12,7 @@ f.alpha = function(Qxy,Qyx,score_x,score_y,admissible){
 f.Q = function(conflicts){1/(2*length(conflicts))}
 ############################ SETUP THE NETWORK ################################
 # select grid = 0,1,2,3,4,5 for real map, sq, hex, NCdummy, NCreal, NCsub
-grid = 2
+grid = 5
 if (grid == 5) {
   n = sqrt(1060)
   Ndist = 5
@@ -64,7 +64,7 @@ if (grid == 0) {
 #              "deepskyblue","turquoise3","seagreen","olivedrab2","gold",
 #              "darkorange1","orange")
 
-vcolor = c("turquoise3","gold","olivedrab3","royalblue","darkorange","grey","red")
+vcolor = c("turquoise3","gold","olivedrab3","royalblue","darkorange","black","red")
 #vshape = c("circle","square","rectangle","none")
 
 
@@ -74,11 +74,6 @@ par(mar=c(2,0,2,0)+0.1,mfrow=c(1,1))
 plot(gplot, vertex.color=vcolor[get.vertex.attribute(g,"district")], 
      vertex.frame.color=vcolor[get.vertex.attribute(g,"district")],
      asp=0)
-axis(1)
-axis(2,pos=-1)
-abline(h=1)
-abline(h=-1)
-abline(h=0)
 # The edgelist won't change so create it now
 Elist = get.edgelist(g)
 class(Elist) = "numeric"
@@ -89,18 +84,18 @@ E(g)$p2 = V(g)$district[Elist[,2]]
 ################################ CONSTANTS #####################################
 # population constants
 pop_ideal = sum(vertex_attr(g,"population"))/Ndist
-deviation = 0.7
+deviation = 0.01
 ubound = pop_ideal+(deviation*pop_ideal/2)
 lbound = pop_ideal-(deviation*pop_ideal/2)
 pop_bound = c(lbound,ubound); pop_bound
 # county split constants
 Mc = 100
 # score function weightings
-wp = 1
-wc = 1
-wi = 1
+wp = 0
+wc = 0
+wi = 0
 # temperature
-beta = 1
+beta = 0
 ###################### DOES INITIAL DISTRICT OBEY POP BALANCE #################
 balance_check = numeric(Ndist)
 for (i in 1:Ndist) {
@@ -118,20 +113,16 @@ contigous_check
 
 # Plot before starting 
 # internal edges are color - conflicting edges are grey
-edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
+#edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
 district = V(g)$district
-par(mfrow=c(2,2),mar=c(2,1.3,2,0.5)+0.1)
-plot(gplot, asp=1, vertex.color=vcolor[district], 
-     vertex.frame.color=vcolor[district],
-     edge.color=vcolor[edge_color], main="Initial Districting")
-legend("topright",legend=c("District 1","District 2", "District 3"),
-       col=vcolor[1:3],pch=19,bty="n")
-axis(1)
-axis(2,pos=-1.1)
+par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
+plot(gplot, asp=0, vertex.color=vcolor[district], 
+     vertex.frame.color=vcolor[district], main="Initial Districting")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5"),
+       col=vcolor[1:5],pch=19)#,bty="n")
 
-a = c(1525,1527,1528)
-for (j in 1:3) {
-set.seed(a[j])
+# set.seed(1412)
 # Boundary flip in a loop
 N = 1
 # information to store
@@ -169,7 +160,7 @@ for (i in 1:N) {
   # Check if proposal is balanced - store this information
   balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
   # Removing balanced from admissible function
-  admissible[i] = as.integer(contigous1 & balanced)
+  admissible[i] = as.integer(contigous1) #& balanced[i])
   Jpy[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
   Jcy[i] = f.countyscore(g,temp_dist,Mc,Ncounty)
   Jiy[i] = f.roeck(g,temp_dist,Ndist,grid)
@@ -181,13 +172,13 @@ for (i in 1:N) {
   alpha = f.alpha(Qxy,Qyx,score_x,score_y,admissible[i])
   # generate a uniform random variable
   U = runif(1)
-  if (N == 1) {
+  if (N <= 10) {
     cat("edge =",Elist[c.edge,],"v.flip =",v.flip,"contig =",contigous1, 
-        "balanced =",balanced,"admissible =",admissible, 
+        "balanced =",balanced[i],"admissible =",admissible[i], 
         "U =",round(U,3),"alpha =",round(alpha,3),sep=" ","\n")
-    cat("Jpx=",round(Jpx,5),"Jcx=",round(Jcx,3),"Jix=",round(Jix,3),
+    cat("Jpx=",round(Jpx[i],5),"Jcx=",round(Jcx[i],3),"Jix=",round(Jix[i],3),
         "score_x=",score_x,"\n",
-        "Jpy=",round(Jpy,5),"Jcy=",round(Jcy,3),"Jiy=",round(Jiy,3),
+        "Jpy=",round(Jpy[i],5),"Jcy=",round(Jcy[i],3),"Jiy=",round(Jiy[i],3),
         "score_y=",score_y,sep=" ","\n")
   }
   accepted[i] = ifelse(U <= alpha, 1,0)
@@ -204,58 +195,36 @@ for (i in 1:N) {
   ##########################################################################
 }
 toc()
-# 6675 secs for 10000, 111 minutes, approx 2 hours
+# 6675 secs for 10000, 111 minutes, approx 2 hours - OLD CODE
+# 35 secs for 400 therefore 3500 secs for 40000 - 1 hour
 
 # Plot after 
-# internal edges are color - conflicting edges are grey
-edge_color[c.edge] = 7
-frame_color = V(g)$district
-frame_color[v.flip] = 7
-plot(gplot,asp=1, vertex.color=vcolor[district], 
-     vertex.frame.color=vcolor[frame_color],
-     edge.color=vcolor[edge_color], main=paste("Run",j,sep=" "))
-edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
-district = V(g)$district
-}
-library(plotrix)
-par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
-plot(-1:12,-1:12,type="n")
-d1 = data.frame(point.x = c(6,7.5,9,10.5,4.5), point.y=c(2,3,4,5,3))
-d2 = data.frame(point.x = c(6,7.5,9,3,4.5), point.y=c(4,5,6,4,5))  
-d3 = data.frame(point.x = c(6,7.5,1.5,3,4.5,6), point.y=c(6,7,5,6,7,8))
-points(d1,pch=19,col=vcolor[1])
-points(d2,pch=19,col=vcolor[2])
-points(d3,pch=19,col=vcolor[3])
-draw.circle(getMinCircle(d1)$ctr[1],getMinCircle(d1)$ctr[2],
-            getMinCircle(d1)$rad,border=vcolor[1])
-draw.circle(getMinCircle(d2)$ctr[1],getMinCircle(d2)$ctr[2],
-            getMinCircle(d2)$rad,border=vcolor[2])
-draw.circle(getMinCircle(d3)$ctr[1],getMinCircle(d3)$ctr[2],
-            getMinCircle(d3)$rad,border=vcolor[3])
-# Store info on how many admissible and how many accepted!
+plot(gplot,asp=0, vertex.color=vcolor[V(g)$district], 
+     vertex.frame.color=vcolor[V(g)$district], main="40,000 Steps")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5"),
+       col=vcolor[1:5],pch=19)#,bty="n")
+
+# Store info on how many admissible, how many balanced, and how many accepted
+# When beta = 0 then mean(admissible) approx mean(accepted)
 balanced
 mean(balanced)
-mean(balanced[1:500])
-mean(balanced[9500:10000])
 admissible
 mean(admissible)
 accepted
 mean(accepted)
-min(Jpx)
-max(Jpx)
-min(Jpy)
-max(Jpy)
-round(Jpx,4)
-# Aim is for the population score to get closer and closer to 0.
-exp(0)
 
-plot(gplot, vertex.color=vcolor[V(g)$district], 
-     vertex.frame.color=vcolor[V(g)$district],
-     edge.color=vcolor[get.edge.attribute(g,"p1")])
+mean(Jpx)
+mean(Jpy)
+mean(Jcx)
+mean(Jcy)
+mean(Jix)
+mean(Jiy)
 
-png("grid.png")
-plot(gplot, vertex.color=V(g)$district, vertex.frame.color=V(g)$district)
-dev.off(); graphics.off()
+
+# png("grid.png")
+# plot(gplot, vertex.color=V(g)$district, vertex.frame.color=V(g)$district)
+# dev.off(); graphics.off()
 
 
 

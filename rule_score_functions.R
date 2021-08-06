@@ -90,25 +90,28 @@ f.popscore = function(G,district,pop_ideal,Ndist){
 # Mc is a large constant
 f.countyscore = function(G,district,Mc,Ncounty) {
   # initiate the values
+  c = unique(V(G)$county)
   split2 = 0; split3 = 0; W2 = 0; W3 = 0
   # get the number of counties
   # Ncounty = length(unique(V(G)$county))-1
   for (i in 1:Ncounty) {
     # table of how many county vertices are contained across districts
-    county_districts = table(district[which(V(G)$county==i)])
+    county_districts = table(district[which(V(G)$county==c[i])])
+    print(county_districts)
     # Across how many districts are the counties split
-    splits = length(unique(district[which(V(G)$county==i)]))
+    splits = length(unique(district[which(V(G)$county==c[i])]))
+    print(splits)
     # Loop to sum up 2- and 3-way splits and the weighting
     if (splits == 2) {
       split2 = split2+1
-      W2 = W2 + sqrt(min(county_districts)/length(which(V(G)$county==i)))
+      W2 = W2 + sqrt(min(county_districts)/length(which(V(G)$county==c[i])))
     } else if (splits == 3) {
       split3 = split3+1
-      W3 = W3 + sqrt(min(county_districts)/length(which(V(G)$county==i)))
+      W3 = W3 + sqrt(min(county_districts)/length(which(V(G)$county==c[i])))
     } else if (splits > 3) {
       split3 = split3+1
       sorted = sort(county_districts,decreasing = T)
-      W3 = W3 + sqrt(sum(sorted[3:length(sorted)])/length(which(V(G)$county==i)))
+      W3 = W3 + sqrt(sum(sorted[3:length(sorted)])/length(which(V(G)$county==c[i])))
     }
   }
   # The county split score function.

@@ -91,7 +91,9 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
                         population = rep(1, nodes),
                         district = district0,  area=rep(2.6,nodes),
                         centroidx = c(6,7.5,9,10.5,4.5,6,7.5,9,3,4.5,6,7.5,1.5,3,4.5,6), 
-                        centroidy = c(2,3,4,5,3,4,5,6,4,5,6,7,5,6,7,8))
+                        centroidy = c(0,0.87,1.73,2.6,0.87,1.73,2.6,3.46,
+                                      1.73,2.6,3.46,4.33,2.6,3.46,4.33,5.17))
+                                      #c(2,3,4,5,3,4,5,6,4,5,6,7,5,6,7,8))
   }
 
   if (graph_type == 0) {

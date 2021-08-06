@@ -124,7 +124,7 @@ legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
 
 # set.seed(1412)
 # Boundary flip in a loop
-N = 1
+N = 400
 # information to store
 balanced = accepted = admissible = numeric(N)
 Jpx = Jpy = Jcx = Jcy = Jix = Jiy = numeric(N)

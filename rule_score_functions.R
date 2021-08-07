@@ -116,7 +116,8 @@ f.countyscore = function(G,district,Mc,Ncounty) {
   }
   # The county split score function.
   Jc = split2*W2 + Mc*split3*W3
-  Jc
+  Jc_list = list("Jc"=Jc,"split2"=split2,"split3"=split3)
+  return(Jc_list)
 }
 
 f.distance = function(x1,x2,y1,y2) {
@@ -129,7 +130,7 @@ f.distance = function(x1,x2,y1,y2) {
   d_km
 }
 
-f.roeck = function(G,district,Ndist,graph_type) {
+f.roeck = function(G,district,Ndist) {
   #Ndist = length(unique(district))-1
   roeck = numeric(Ndist)
   for (i in 1:Ndist) {
@@ -157,7 +158,8 @@ f.roeck = function(G,district,Ndist,graph_type) {
     roeck[i] = Acircle/Adistrict
   }
   Ji = sum(roeck)
-  Ji
+  roeck_list = list("Ji"=Ji,"Roeck"=roeck)
+  return(roeck_list)
 }
 
 # Compactness score

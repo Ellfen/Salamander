@@ -129,6 +129,27 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
   
 }
 
+f.graph40 = function() {
+  # only accepts grid type 5
+  nodes = 1060
+  NCshp = st_read("data_cleaning/NCData40KSteps.shp")
+  P.data = as.data.frame(NCshp)
+  P.data = P.data[,-dim(P.data)[2]]
+  adjlist = redist.adjacency(NCshp)
+  adjm = matrix(0, nrow=length(adjlist),ncol=length(adjlist))
+  for (i in 1:length(adjlist)) {
+    unlist = adjlist[[i]]+1
+    unlist = unlist[which(unlist>i)]
+    for (j in 1:length(unlist)) {
+      adjm[i,unlist[j]] = 1
+    }
+  }
+  E.data = f.edges(adjm)
+  E.data$weight = rep(1, dim(E.data)[1])
+  g = graph_from_data_frame(E.data, directed = FALSE, 
+                            vertices=P.data)
+}
+
 # Function to determine which vertices are on the perimeter - add a perimeter 
 # node with id no. nodes+1 and add the external edges.
 f.perimeter = function(g,nodes) {

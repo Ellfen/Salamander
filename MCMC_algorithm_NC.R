@@ -13,6 +13,8 @@ f.Q = function(conflicts){1/(2*length(conflicts))}
 ############################ SETUP THE NETWORK ################################
 # select grid = 0,1,2,3,4,5 for real map, sq, hex, NCdummy, NCreal, NCsub
 grid = 5
+# stage = 1 for inital 40K steps and so on
+stage = 2
 if (grid == 5) {
   n = sqrt(1060)
   Ndist = 5
@@ -25,14 +27,14 @@ if (grid == 5) {
   
 }
 
-gplot = f.graph(n,grid,Ndist,Ncounty)
+gplot = f.graph40()#f.graph(n,grid,Ndist,Ncounty)
 nodes = vcount(gplot)
 g = gplot
 # Do not add perimeter info
 # g = f.perimeter(gplot,nodes)
 
 # Absorb discontiguous nodes
-if (grid == 5) {
+if (grid == 5 & stage == 1) {
   V(g)$district[which(V(g)$name=="197")] = 1
   V(g)$district[which(V(g)$name=="208")] = 1
   V(g)$district[which(V(g)$name=="221")] = 1
@@ -91,7 +93,7 @@ pop_bound = c(lbound,ubound); pop_bound
 # county split constants
 Mc = 100
 # score function weightings
-wp = 0
+wp = 1000
 wc = 0
 wi = 0
 # temperature
@@ -124,10 +126,12 @@ legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
 
 # set.seed(1412)
 # Boundary flip in a loop
-N = 40000
+N = 10
 # information to store
 balanced = accepted = admissible = numeric(N)
-Jpx = Jpy = Jcx = Jcy = Jix = Jiy = numeric(N)
+Jpx = Jcx = Jix = numeric(N+1)
+roeckx = matrix(NA, nrow=N+1, ncol=5)
+splitx = matrix(NA, nrow=N+1, ncol=2)
 tic()
 for (i in 1:N) {
   print(i)
@@ -149,8 +153,11 @@ for (i in 1:N) {
   temp_p1 = E(g)$p1
   temp_p2 = E(g)$p2
   Jpx[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
-  Jcx[i] = f.countyscore(g,temp_dist,Mc,Ncounty)
-  Jix[i] = f.roeck(g,temp_dist,Ndist,grid)
+  Jcx[i] = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
+  splitx[i,] = c(f.countyscore(g,temp_dist,Mc,Ncounty)$split2,
+                 f.countyscore(g,temp_dist,Mc,Ncounty)$split3)
+  Jix[i] = f.roeck(g,temp_dist,Ndist)$Ji
+  roeckx[i,] =  f.roeck(g,temp_dist,Ndist)$Roeck
   score_x = exp(-beta*((wp*Jpx[i])+(wc*Jcx[i])+(wi*Jix[i])))
   temp_dist[v.flip] = dist_y
   temp_p1[which(Elist[,1]==v.flip)] = temp_dist[v.flip]
@@ -161,10 +168,13 @@ for (i in 1:N) {
   balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
   # Removing balanced from admissible function
   admissible[i] = as.integer(contigous1) #& balanced[i])
-  Jpy[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
-  Jcy[i] = f.countyscore(g,temp_dist,Mc,Ncounty)
-  Jiy[i] = f.roeck(g,temp_dist,Ndist,grid)
-  score_y = exp(-beta*(wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i]))
+  Jpy = f.popscore(g,temp_dist,pop_ideal,Ndist)
+  Jcy = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
+  splity = c(f.countyscore(g,temp_dist,Mc,Ncounty)$split2,
+                 f.countyscore(g,temp_dist,Mc,Ncounty)$split3)
+  Jiy = f.roeck(g,temp_dist,Ndist)$Ji
+  roecky = f.roeck(g,temp_dist,Ndist)$Roeck
+  score_y = exp(-beta*(wp*Jpy+wc*Jcy+wi*Jiy))
   # Calculate the acceptance function - using uniform score for now
   Qxy = f.Q(conflict_x)
   conflict_y = which(temp_p1 != temp_p2)#which(temp_p1[1:(Eint-1)] != temp_p2[1:(Eint-1)])
@@ -172,7 +182,7 @@ for (i in 1:N) {
   alpha = f.alpha(Qxy,Qyx,score_x,score_y,admissible[i])
   # generate a uniform random variable
   U = runif(1)
-  if (N <= 10) {
+  if (N < 10) {
     cat("edge =",Elist[c.edge,],"v.flip =",v.flip,"contig =",contigous1, 
         "balanced =",balanced[i],"admissible =",admissible[i], 
         "U =",round(U,3),"alpha =",round(alpha,3),sep=" ","\n")
@@ -193,14 +203,22 @@ for (i in 1:N) {
     E(g)$p2 = E(g)$p2
   }
   ##########################################################################
+  beta = beta + (1/(N-1))
 }
 toc()
 # 6675 secs for 10000, 111 minutes, approx 2 hours - OLD CODE
 # 35 secs for 400 therefore 3500 secs for 40000 - 1 hour
 
+# Add the last values
+Jpx[i+1] = Jpy
+Jcx[i+1] = Jcy
+Jix[i+1] = Jiy
+roeckx[i+1,] = roecky
+splitx[i+1,] = splity
+
 # Plot after 
 plot(gplot,asp=0, vertex.color=vcolor[V(g)$district], 
-     vertex.frame.color=vcolor[V(g)$district], main="40,000 Steps")
+     vertex.frame.color=vcolor[V(g)$district], main="40K Steps")
 legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
@@ -215,14 +233,11 @@ accepted
 mean(accepted)
 
 mean(Jpx)
-mean(Jpy)
 mean(Jcx)
-mean(Jcy)
 mean(Jix)
-mean(Jiy)
+roeckx
+splitx
 
-Jix[1:10]
-Jix[3900:3910]
 
 # save the new district info
 load("data_cleaning/NCDataSub.RData")

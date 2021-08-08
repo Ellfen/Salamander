@@ -14,7 +14,7 @@ f.Q = function(conflicts){1/(2*length(conflicts))}
 ############################ SETUP THE NETWORK ################################
 # select grid = 0,1,2,3,4,5 for real map, sq, hex, NCdummy, NCreal, NCsub
 grid = 5
-# stage = 1 for inital 40K steps and so on
+# stage = 1 for inital 40K steps and 2 for all other steps
 stage = 2
 if (grid == 5) {
   n = sqrt(1060)
@@ -96,8 +96,8 @@ pop_bound = c(lbound,ubound); pop_bound
 Mc = 100
 # score function weightings
 wp = 500
-wc = 0.8
-wi = 6
+wc = 2
+wi = 4
 ###################### DOES INITIAL DISTRICT OBEY POP BALANCE #################
 balance_check = numeric(Ndist)
 for (i in 1:Ndist) {
@@ -131,9 +131,9 @@ split2 = 0; split3 = 0; split4 = 0;
 # Ncounty = length(unique(V(G)$county))-1
 for (i in 1:Ncounty) {
   # table of how many county vertices are contained across districts
-  county_districts = table(district[which(V(g)$county==o[i])])
+  county_districts = table(V(g)$district[which(V(g)$county==o[i])])
   # Across how many districts are the counties split
-  splits = length(unique(district[which(V(g)$county==o[i])]))
+  splits = length(unique(V(g)$district[which(V(g)$county==o[i])]))
   # Loop to sum up 2- and 3-way splits and the weighting
   if (splits == 2) {
     split2 = split2+1
@@ -143,7 +143,9 @@ for (i in 1:Ncounty) {
     split4 = split4+1
   }
 }
-
+split2
+split3
+split4
 
 
 # Plot before starting 
@@ -161,12 +163,13 @@ legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
 #set.seed(1527)
 #set.seed(1528)
 # Boundary flip in a loop
-N = 5000
-beta = 1
+N = 15000
+beta = 0
 # information to store
 balanced = accepted = admissible = contigous = compact = numeric(N)
 Jpy = Jiy = numeric(N)
 tied = Jcy = numeric(N)
+redseats = numeric(N)
 
 tic()
 for (i in 1:N) {
@@ -239,7 +242,8 @@ for (i in 1:N) {
     E(g)$p2 = E(g)$p2
   }
   ##########################################################################
-  #beta = beta + (1/(N-1))
+  beta = beta + (1/(N-1))
+  redseats[i] = f.seat.red(g,Ndist)
 }
 toc()
 # 6675 secs for 10000, 111 minutes, approx 2 hours - OLD CODE
@@ -267,18 +271,29 @@ mean(Jcy)
 mean(Jiy)
 min(Jiy)
 max(Jiy)
-length(Jiy[which(Jiy <= 19)])/N
+length(Jiy[which(Jiy < 18)])/N
+
+outcome = data.frame("accepted"=accepted,"admissible"=admissible,
+                     "redseats"=redseats)
+outcome = outcome[-which(outcome$accepted==0),]
+outcome = outcome[-which(outcome$admissible==0),]
+outcome$blueseats = Ndist - outcome$redseats
+
+par(mfrow=c(1,2),mar=c(3,3,3,3)+0.1)
+hist(outcome$redseats, freq=F,
+     breaks=seq(min(outcome$redseats)-0.5, max(outcome$redseats)+0.5, by=1))
+#red_seats
+hist(outcome$blueseats, freq=F,
+     breaks=seq(min(outcome$blueseats)-0.5, max(outcome$blueseats)+0.5, by=1))
+
 
 # save the new district info
-load("data_cleaning/NCDataSub.RData")
-NCAnnealing1 = NCDataSub
-NCAnnealing1$district = V(g)$district
-sum(NCDataSub$district == NCAnnealing1$district)
-save(NCAnnealing1, file="data_cleaning/NCAnnealing1.RData")
-st_write(NCAnnealing1,"data_cleaning/NCAnnealing1.shp",append=F)
-# png("grid.png")
-# plot(gplot, vertex.color=V(g)$district, vertex.frame.color=V(g)$district)
-# dev.off(); graphics.off()
+# load("data_cleaning/NCDataSub.RData")
+# NCAnnealing3 = NCDataSub
+# NCAnnealing3$district = V(g)$district
+# sum(NCDataSub$district == NCAnnealing3$district)
+# save(NCAnnealing3, file="data_cleaning/NCAnnealing3.RData")
+# st_write(NCAnnealing3,"data_cleaning/NCAnnealing3.shp",append=F)
 
 
 

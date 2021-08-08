@@ -159,7 +159,7 @@ f.roeck = function(G,district,Ndist) {
     roeck[i] = Acircle/Adistrict
   }
   Ji = sum(roeck)
-  compact = ifelse(max(roeck) <= 4, 1, 0)
+  compact = ifelse(max(roeck) < 6.7, 1, 0)
   roeck_list = list("Ji"=Ji,"compact"=compact)
   return(roeck_list)
 }

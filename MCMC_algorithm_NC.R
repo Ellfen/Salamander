@@ -7,7 +7,8 @@ source("rule_score_functions.R")
 source("distribution_functions.R")
 # Acceptance probability function f.alpha
 f.alpha = function(Qxy,Qyx,score_x,score_y,admissible){
-  min((Qyx*score_y*admissible)/(Qxy*score_x), 1)
+  value = min((Qyx*score_y*admissible)/(Qxy*score_x),1)
+  ifelse(is.nan(value),0,value)
 }
 f.Q = function(conflicts){1/(2*length(conflicts))}
 ############################ SETUP THE NETWORK ################################
@@ -27,7 +28,8 @@ if (grid == 5) {
   
 }
 
-gplot = f.graph40()#f.graph(n,grid,Ndist,Ncounty)
+gplot = f.graph40()
+#gplot = f.graph(n,grid,Ndist,Ncounty)
 nodes = vcount(gplot)
 g = gplot
 # Do not add perimeter info
@@ -93,11 +95,9 @@ pop_bound = c(lbound,ubound); pop_bound
 # county split constants
 Mc = 100
 # score function weightings
-wp = 1000
-wc = 0
-wi = 0
-# temperature
-beta = 0
+wp = 500
+wc = 0.8
+wi = 6
 ###################### DOES INITIAL DISTRICT OBEY POP BALANCE #################
 balance_check = numeric(Ndist)
 for (i in 1:Ndist) {
@@ -112,6 +112,39 @@ for (i in 1:Ndist) {
   contigous_check[i] = f.is.contigous1(i,g,V(g)$district)
 }
 contigous_check
+############################## COMPACT CHECK ##################################
+roeck = numeric(Ndist)
+for (i in 1:Ndist) {
+  xy = cbind(V(g)$centroidx[which(V(g)$district==i)],
+             V(g)$centroidy[which(V(g)$district==i)])
+  r = getMinCircle(xy)$rad
+  Acircle = r^2*pi
+  Adistrict = sum(V(g)$area[which(V(g)$district==i)])
+  roeck[i] = Acircle/Adistrict
+}
+roeck
+sum(roeck)
+############################## SPLITS #########################################
+o = unique(V(g)$county)
+split2 = 0; split3 = 0; split4 = 0;
+# get the number of counties
+# Ncounty = length(unique(V(G)$county))-1
+for (i in 1:Ncounty) {
+  # table of how many county vertices are contained across districts
+  county_districts = table(district[which(V(g)$county==o[i])])
+  # Across how many districts are the counties split
+  splits = length(unique(district[which(V(g)$county==o[i])]))
+  # Loop to sum up 2- and 3-way splits and the weighting
+  if (splits == 2) {
+    split2 = split2+1
+  } else if (splits == 3) {
+    split3 = split3+1
+  } else if (splits > 3) {
+    split4 = split4+1
+  }
+}
+
+
 
 # Plot before starting 
 # internal edges are color - conflicting edges are grey
@@ -124,14 +157,17 @@ legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
 
-# set.seed(1412)
+#set.seed(1525)
+#set.seed(1527)
+#set.seed(1528)
 # Boundary flip in a loop
-N = 10
+N = 5000
+beta = 1
 # information to store
-balanced = accepted = admissible = numeric(N)
-Jpx = Jcx = Jix = numeric(N+1)
-roeckx = matrix(NA, nrow=N+1, ncol=5)
-splitx = matrix(NA, nrow=N+1, ncol=2)
+balanced = accepted = admissible = contigous = compact = numeric(N)
+Jpy = Jiy = numeric(N)
+tied = Jcy = numeric(N)
+
 tic()
 for (i in 1:N) {
   print(i)
@@ -152,45 +188,45 @@ for (i in 1:N) {
   temp_dist = V(g)$district
   temp_p1 = E(g)$p1
   temp_p2 = E(g)$p2
-  Jpx[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
-  Jcx[i] = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
-  splitx[i,] = c(f.countyscore(g,temp_dist,Mc,Ncounty)$split2,
-                 f.countyscore(g,temp_dist,Mc,Ncounty)$split3)
-  Jix[i] = f.roeck(g,temp_dist,Ndist)$Ji
-  roeckx[i,] =  f.roeck(g,temp_dist,Ndist)$Roeck
-  score_x = exp(-beta*((wp*Jpx[i])+(wc*Jcx[i])+(wi*Jix[i])))
+  Jpx = f.popscore(g,temp_dist,pop_ideal,Ndist)
+  Jcx = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
+  Jix = f.roeck(g,temp_dist,Ndist)$Ji
+  score_x = exp(-beta*((wp*Jpx)+(wc*Jcx)+(wi*Jix)))
   temp_dist[v.flip] = dist_y
   temp_p1[which(Elist[,1]==v.flip)] = temp_dist[v.flip]
   temp_p2[which(Elist[,2]==v.flip)] = temp_dist[v.flip]
   # Check if proposal is contigous
-  contigous1 = f.is.contigous1(dist_x,g,temp_dist)
-  # Check if proposal is balanced - store this information
+  contigous[i] = f.is.contigous1(dist_x,g,temp_dist)
+  # Evaluate the score functions
+  Jpy[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
+  c = f.countyscore(g,temp_dist,Mc,Ncounty)
+  Jcy[i] = c$Jc
+  roeck = f.roeck(g,temp_dist,Ndist)
+  Jiy[i] = roeck$Ji
+  score_y = exp(-beta*(wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i]))
+  # Check if proposal is balanced/compact/tied - store this information
   balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
-  # Removing balanced from admissible function
-  admissible[i] = as.integer(contigous1) #& balanced[i])
-  Jpy = f.popscore(g,temp_dist,pop_ideal,Ndist)
-  Jcy = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
-  splity = c(f.countyscore(g,temp_dist,Mc,Ncounty)$split2,
-                 f.countyscore(g,temp_dist,Mc,Ncounty)$split3)
-  Jiy = f.roeck(g,temp_dist,Ndist)$Ji
-  roecky = f.roeck(g,temp_dist,Ndist)$Roeck
-  score_y = exp(-beta*(wp*Jpy+wc*Jcy+wi*Jiy))
+  compact[i] = roeck$compact
+  tied[i] = c$tied
+  admissible[i] = as.integer(balanced[i] & compact[i] & tied[i])
   # Calculate the acceptance function - using uniform score for now
   Qxy = f.Q(conflict_x)
   conflict_y = which(temp_p1 != temp_p2)#which(temp_p1[1:(Eint-1)] != temp_p2[1:(Eint-1)])
   Qyx = f.Q(conflict_y)
-  alpha = f.alpha(Qxy,Qyx,score_x,score_y,admissible[i])
+  alpha = f.alpha(Qxy,Qyx,score_x,score_y,contigous[i])
   # generate a uniform random variable
   U = runif(1)
-  if (N < 10) {
-    cat("edge =",Elist[c.edge,],"v.flip =",v.flip,"contig =",contigous1, 
-        "balanced =",balanced[i],"admissible =",admissible[i], 
-        "U =",round(U,3),"alpha =",round(alpha,3),sep=" ","\n")
-    cat("Jpx=",round(Jpx[i],5),"Jcx=",round(Jcx[i],3),"Jix=",round(Jix[i],3),
-        "score_x=",score_x,"\n",
-        "Jpy=",round(Jpy[i],5),"Jcy=",round(Jcy[i],3),"Jiy=",round(Jiy[i],3),
-        "score_y=",score_y,sep=" ","\n")
-  }
+  
+  # if (N < 10) {
+  #   cat("edge =",Elist[c.edge,],"v.flip =",v.flip,"contig =",contigous[i], 
+  #       "balanced =",balanced[i],"admissible =",admissible[i], 
+  #       "U =",round(U,3),"alpha =",round(alpha,3),sep=" ","\n")
+  #   cat("Jpx=",round(Jpx,5),"Jcx=",round(Jcx,3),"Jix=",round(Jix,3),
+  #       "score_x=",score_x,"\n",
+  #       "Jpy=",round(Jpy[i],5),"Jcy=",round(Jcy[i],3),"Jiy=",round(Jiy[i],3),
+  #       "score_y=",score_y,sep=" ","\n")
+  # }
+  
   accepted[i] = ifelse(U <= alpha, 1,0)
   # Accept or reject proposal
   if (U <= alpha){
@@ -203,50 +239,43 @@ for (i in 1:N) {
     E(g)$p2 = E(g)$p2
   }
   ##########################################################################
-  beta = beta + (1/(N-1))
+  #beta = beta + (1/(N-1))
 }
 toc()
 # 6675 secs for 10000, 111 minutes, approx 2 hours - OLD CODE
 # 35 secs for 400 therefore 3500 secs for 40000 - 1 hour
-
-# Add the last values
-Jpx[i+1] = Jpy
-Jcx[i+1] = Jcy
-Jix[i+1] = Jiy
-roeckx[i+1,] = roecky
-splitx[i+1,] = splity
+# Gets slower as beta increases?
 
 # Plot after 
-plot(gplot,asp=0, vertex.color=vcolor[V(g)$district], 
-     vertex.frame.color=vcolor[V(g)$district], main="40K Steps")
+plot(gplot,asp=0, vertex.color=vcolor[(V(g)$district)], 
+     vertex.frame.color=vcolor[V(g)$district], main="15K Steps")
 legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
 
 # Store info on how many admissible, how many balanced, and how many accepted
 # When beta = 0 then mean(admissible) approx mean(accepted)
-balanced
 mean(balanced)
-admissible
+mean(compact)
 mean(admissible)
-accepted
 mean(accepted)
+mean(contigous)
+mean(tied)
 
-mean(Jpx)
-mean(Jcx)
-mean(Jix)
-roeckx
-splitx
-
+mean(Jpy)
+mean(Jcy)
+mean(Jiy)
+min(Jiy)
+max(Jiy)
+length(Jiy[which(Jiy <= 19)])/N
 
 # save the new district info
 load("data_cleaning/NCDataSub.RData")
-NCData40KSteps = NCDataSub
-NCData40KSteps$district = V(g)$district
-head(NCData40KSteps$district)
-head(NCDataSub$district)
-save(NCData40KSteps, file="data_cleaning/NCData40KSteps.RData")
-st_write(NCData40KSteps,"data_cleaning/NCData40KSteps.shp",append=F)
+NCAnnealing1 = NCDataSub
+NCAnnealing1$district = V(g)$district
+sum(NCDataSub$district == NCAnnealing1$district)
+save(NCAnnealing1, file="data_cleaning/NCAnnealing1.RData")
+st_write(NCAnnealing1,"data_cleaning/NCAnnealing1.shp",append=F)
 # png("grid.png")
 # plot(gplot, vertex.color=V(g)$district, vertex.frame.color=V(g)$district)
 # dev.off(); graphics.off()

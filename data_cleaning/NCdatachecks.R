@@ -251,6 +251,7 @@ NCData$area = NC2012shp$AREA
 # To save without geometry
 save(NCData,file="NCData.RData")
 
+###############################################################################
 # To add geometry to existing file - can just run from here and run very
 # beginning that loads NC2012shp
 load("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCData.RData")

@@ -132,7 +132,7 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
 f.graph40 = function() {
   # only accepts grid type 5
   nodes = 1060
-  NCshp = st_read("data_cleaning/NCData40KSteps.shp")
+  NCshp = st_read("data_cleaning/NCData10KSteps.shp")
   P.data = as.data.frame(NCshp)
   P.data = P.data[,-dim(P.data)[2]]
   adjlist = redist.adjacency(NCshp)

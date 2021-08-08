@@ -116,7 +116,8 @@ f.countyscore = function(G,district,Mc,Ncounty) {
   }
   # The county split score function.
   Jc = split2*W2 + Mc*split3*W3
-  Jc_list = list("Jc"=Jc,"split2"=split2,"split3"=split3)
+  tied = ifelse(split3 == 0, 1, 0)
+  Jc_list = list("Jc"=Jc,"tied"=tied) #list("Jc"=Jc,"split2"=split2,"split3"=split3)
   return(Jc_list)
 }
 
@@ -158,7 +159,8 @@ f.roeck = function(G,district,Ndist) {
     roeck[i] = Acircle/Adistrict
   }
   Ji = sum(roeck)
-  roeck_list = list("Ji"=Ji,"Roeck"=roeck)
+  compact = ifelse(max(roeck) <= 4, 1, 0)
+  roeck_list = list("Ji"=Ji,"compact"=compact)
   return(roeck_list)
 }
 

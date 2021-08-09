@@ -5,7 +5,8 @@ source("../grid_functions.R")
 # A single hexagon
 hex1 = make_graph(c(1,2,1,3,1,4,1,5,1,6,1,7,7,2,2,3,3,4,4,5,5,6,6,7),
                   directed = F)
-plot(hex1)
+par(mar=c(2,0,2,0)+0.1,mfrow=c(1,1))
+plot(hex1, vertex.color="Turquoise",vertex.size=20)
 get.edgelist(hex1)
 adjm = as.matrix(as_adjacency_matrix(hex1))
 adjm

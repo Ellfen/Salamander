@@ -116,15 +116,20 @@ contigous_check
 # internal edges are color - conflicting edges are grey
 edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
 district = V(g)$district
-par(mfrow=c(2,2),mar=c(2,1.3,2,0.5)+0.1)
+dev.new()
+par(mfrow=c(1,1),mar=c(2,1.3,2,0.5)+0.1)
 plot(gplot, asp=1, vertex.color=vcolor[district], 
      vertex.frame.color=vcolor[district],
      edge.color=vcolor[edge_color], main="Initial Districting")
-legend("topright",legend=c("District 1","District 2", "District 3"),
+legend("topleft",legend=c("District 1","District 2", "District 3"),
        col=vcolor[1:3],pch=19,bty="n")
+dev.copy2pdf(file="../Images/hex_init.pdf")
+dev.off(); graphics.off()
+
 #axis(1)
 #axis(2,pos=-1.1)
-
+dev.new()
+par(mfrow=c(1,3),mar=c(2,1.3,2,0.5)+0.1)
 a = c(1525,1527,1528)
 for (j in 1:3) {
 set.seed(a[j])
@@ -154,8 +159,8 @@ for (i in 1:N) {
   temp_p1 = E(g)$p1
   temp_p2 = E(g)$p2
   Jpx[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
-  Jcx[i] = f.countyscore(g,temp_dist,Mc,Ncounty)
-  Jix[i] = f.roeck(g,temp_dist,Ndist,grid)
+  Jcx[i] = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
+  Jix[i] = f.roeck(g,temp_dist,Ndist)$Ji
   score_x = exp(-beta*((wp*Jpx[i])+(wc*Jcx[i])+(wi*Jix[i])))
   temp_dist[v.flip] = dist_y
   temp_p1[which(Elist[,1]==v.flip)] = temp_dist[v.flip]
@@ -167,8 +172,8 @@ for (i in 1:N) {
   # Removing balanced from admissible function
   admissible[i] = as.integer(contigous1 & balanced)
   Jpy[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
-  Jcy[i] = f.countyscore(g,temp_dist,Mc,Ncounty)
-  Jiy[i] = f.roeck(g,temp_dist,Ndist,grid)
+  Jcy[i] = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
+  Jiy[i] = f.roeck(g,temp_dist,Ndist)$Ji
   score_y = exp(-beta*(wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i]))
   # Calculate the acceptance function - using uniform score for now
   Qxy = f.Q(conflict_x)
@@ -209,16 +214,20 @@ frame_color = V(g)$district
 frame_color[v.flip] = 7
 plot(gplot,asp=1, vertex.color=vcolor[district], 
      vertex.frame.color=vcolor[frame_color],
-     edge.color=vcolor[edge_color], main=paste("Run",j,sep=" "))
+     edge.color=vcolor[edge_color], main=paste("Proposal",j,sep=" "))
 edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
 district = V(g)$district
 }
+dev.copy2pdf(file="../Images/hex_4.pdf")
+dev.off()
+
 library(plotrix)
+library(shotGroups)
 par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
 plot(-1:12,-1:12,type="n")
-d1 = data.frame(point.x = c(6,7.5,9,10.5,4.5), point.y=c(2,3,4,5,3))
-d2 = data.frame(point.x = c(6,7.5,9,3,4.5), point.y=c(4,5,6,4,5))  
-d3 = data.frame(point.x = c(6,7.5,1.5,3,4.5,6), point.y=c(6,7,5,6,7,8))
+d1 = data.frame(point.x = c(6,7.5,9,10.5,4.5), point.y=c(0,0.87,1.73,2.6,0.87))
+d2 = data.frame(point.x = c(6,7.5,9,3,4.5,1.5), point.y=c(1.73,2.6,3.46,1.73,2.6,2.6))  
+d3 = data.frame(point.x = c(6,7.5,3,4.5,6), point.y=c(3.46,4.33,3.46,4.33,5.17))
 points(d1,pch=19,col=vcolor[1])
 points(d2,pch=19,col=vcolor[2])
 points(d3,pch=19,col=vcolor[3])
@@ -228,6 +237,10 @@ draw.circle(getMinCircle(d2)$ctr[1],getMinCircle(d2)$ctr[2],
             getMinCircle(d2)$rad,border=vcolor[2])
 draw.circle(getMinCircle(d3)$ctr[1],getMinCircle(d3)$ctr[2],
             getMinCircle(d3)$rad,border=vcolor[3])
+getMinCircle(d1)$rad
+getMinCircle(d2)$rad
+getMinCircle(d3)$rad
+
 # Store info on how many admissible and how many accepted!
 balanced
 mean(balanced)
@@ -253,5 +266,7 @@ png("grid.png")
 plot(gplot, vertex.color=V(g)$district, vertex.frame.color=V(g)$district)
 dev.off(); graphics.off()
 
+png("grid.png")
 
+dev.off(); graphics.off()
 

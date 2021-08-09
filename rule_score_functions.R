@@ -121,15 +121,15 @@ f.countyscore = function(G,district,Mc,Ncounty) {
   return(Jc_list)
 }
 
-f.distance = function(x1,x2,y1,y2) {
-  lat1 = y1/(180/pi)
-  lat2 = y2/(180/pi)
-  long1 = x1/(180/pi)
-  long2 = x2/(180/pi)
-  d_mi = 3963*acos((sin(lat1)*sin(lat2))+cos(lat1)*cos(lat2)*cos(long2-long1))
-  d_km = 1.609344*d_mi
-  d_km
-}
+# f.distance = function(x1,x2,y1,y2) {
+#   lat1 = y1/(180/pi)
+#   lat2 = y2/(180/pi)
+#   long1 = x1/(180/pi)
+#   long2 = x2/(180/pi)
+#   d_mi = 3963*acos((sin(lat1)*sin(lat2))+cos(lat1)*cos(lat2)*cos(long2-long1))
+#   d_km = 1.609344*d_mi
+#   d_km
+# }
 
 f.roeck = function(G,district,Ndist) {
   #Ndist = length(unique(district))-1
@@ -159,7 +159,7 @@ f.roeck = function(G,district,Ndist) {
     roeck[i] = Acircle/Adistrict
   }
   Ji = sum(roeck)
-  compact = ifelse(max(roeck) < 6.7, 1, 0)
+  compact = max(roeck)#ifelse(max(roeck) <= 7, 1, 0)
   roeck_list = list("Ji"=Ji,"compact"=compact)
   return(roeck_list)
 }

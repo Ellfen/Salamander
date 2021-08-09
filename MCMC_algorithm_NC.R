@@ -74,6 +74,7 @@ vcolor = c("turquoise3","gold","olivedrab3","royalblue","darkorange","black","re
 
 
 graph_attr(gplot,"margin") = rep(0.01,4)
+
 par(mar=c(2,0,2,0)+0.1,mfrow=c(1,1))
 plot(gplot, vertex.color=vcolor[get.vertex.attribute(g,"district")], 
      vertex.frame.color=vcolor[get.vertex.attribute(g,"district")],
@@ -97,7 +98,7 @@ Mc = 100
 # score function weightings
 wp = 500
 wc = 2
-wi = 4
+wi = 2
 ###################### DOES INITIAL DISTRICT OBEY POP BALANCE #################
 balance_check = numeric(Ndist)
 for (i in 1:Ndist) {
@@ -152,28 +153,29 @@ split4
 # internal edges are color - conflicting edges are grey
 #edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
 district = V(g)$district
+dev.new()
 par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
 plot(gplot, asp=0, vertex.color=vcolor[district], 
-     vertex.frame.color=vcolor[district], main="Initial Districting")
+     vertex.frame.color=vcolor[district], main="Annealing 30K, w = [500, 2, 2]")
 legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
-
+dev.copy2pdf(file="../Images/Annealing30K1.pdf")
+dev.off()
 #set.seed(1525)
 #set.seed(1527)
 #set.seed(1528)
 # Boundary flip in a loop
-N = 15000
-beta = 0
+N = 100000
+beta = 1
 # information to store
-balanced = accepted = admissible = contigous = compact = numeric(N)
-Jpy = Jiy = numeric(N)
-tied = Jcy = numeric(N)
+balanced = accepted = admissible = compact = tied = numeric(N)
+J = Jiy = Jpy = Jcy = numeric(N)
 redseats = numeric(N)
+proposal = numeric(N)
 
 tic()
 for (i in 1:N) {
-  print(i)
   ################################ FLIP WALK ##################################
   # step 1 - vector of conflicting edges
   conflict_x = which(E(g)$p1 != E(g)$p2) #which(E(g)$p1[1:(Eint-1)] != E(g)$p2[1:Eint-1])
@@ -183,6 +185,7 @@ for (i in 1:N) {
   flip = sample(1:2,1)
   # variable to store ID of vertex to be flipped
   v.flip = Elist[c.edge,flip]
+  proposal[i] = v.flip
   # variables to store ID of current district and proposed district of v.flip
   dist_x = ifelse(flip==1,E(g)$p1[c.edge],E(g)$p2[c.edge])
   dist_y = ifelse(flip==1,E(g)$p2[c.edge],E(g)$p1[c.edge])
@@ -199,24 +202,25 @@ for (i in 1:N) {
   temp_p1[which(Elist[,1]==v.flip)] = temp_dist[v.flip]
   temp_p2[which(Elist[,2]==v.flip)] = temp_dist[v.flip]
   # Check if proposal is contigous
-  contigous[i] = f.is.contigous1(dist_x,g,temp_dist)
+  contigous = f.is.contigous1(dist_x,g,temp_dist)
   # Evaluate the score functions
   Jpy[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
   c = f.countyscore(g,temp_dist,Mc,Ncounty)
   Jcy[i] = c$Jc
   roeck = f.roeck(g,temp_dist,Ndist)
   Jiy[i] = roeck$Ji
-  score_y = exp(-beta*(wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i]))
+  J[i] = (wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i])
+  score_y = exp(-beta*J[i])
   # Check if proposal is balanced/compact/tied - store this information
   balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
   compact[i] = roeck$compact
   tied[i] = c$tied
-  admissible[i] = as.integer(balanced[i] & compact[i] & tied[i])
+  #admissible[i] = as.integer(balanced[i] & compact[i] & tied[i])
   # Calculate the acceptance function - using uniform score for now
   Qxy = f.Q(conflict_x)
   conflict_y = which(temp_p1 != temp_p2)#which(temp_p1[1:(Eint-1)] != temp_p2[1:(Eint-1)])
   Qyx = f.Q(conflict_y)
-  alpha = f.alpha(Qxy,Qyx,score_x,score_y,contigous[i])
+  alpha = f.alpha(Qxy,Qyx,score_x,score_y,contigous)
   # generate a uniform random variable
   U = runif(1)
   
@@ -236,13 +240,14 @@ for (i in 1:N) {
     V(g)$district[v.flip] = dist_y
     E(g)$p1 = temp_p1
     E(g)$p2 = temp_p2
+    print(i)
   } else {
     V(g)$district[v.flip] = dist_x
     E(g)$p1 = E(g)$p1
     E(g)$p2 = E(g)$p2
   }
   ##########################################################################
-  beta = beta + (1/(N-1))
+  #beta = beta + (1/(N-1))
   redseats[i] = f.seat.red(g,Ndist)
 }
 toc()
@@ -250,28 +255,36 @@ toc()
 # 35 secs for 400 therefore 3500 secs for 40000 - 1 hour
 # Gets slower as beta increases?
 
+unique_proposals = length(unique(proposal))
+length(which(E(g)$p1 != E(g)$p2))
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
+hist(proposal,breaks = unique_proposals)
+
 # Plot after 
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
 plot(gplot,asp=0, vertex.color=vcolor[(V(g)$district)], 
      vertex.frame.color=vcolor[V(g)$district], main="15K Steps")
 legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
 
+mean(J)
+plot(J,type="l")
+
 # Store info on how many admissible, how many balanced, and how many accepted
 # When beta = 0 then mean(admissible) approx mean(accepted)
 mean(balanced)
 mean(compact)
+min(compact)
+max(compact)
+mean(tied)
 mean(admissible)
 mean(accepted)
-mean(contigous)
-mean(tied)
 
-mean(Jpy)
-mean(Jcy)
 mean(Jiy)
 min(Jiy)
 max(Jiy)
-length(Jiy[which(Jiy < 18)])/N
+length(Jiy[which(Jiy <= 20)])/N
 
 outcome = data.frame("accepted"=accepted,"admissible"=admissible,
                      "redseats"=redseats)
@@ -288,12 +301,19 @@ hist(outcome$blueseats, freq=F,
 
 
 # save the new district info
-# load("data_cleaning/NCDataSub.RData")
-# NCAnnealing3 = NCDataSub
-# NCAnnealing3$district = V(g)$district
-# sum(NCDataSub$district == NCAnnealing3$district)
-# save(NCAnnealing3, file="data_cleaning/NCAnnealing3.RData")
-# st_write(NCAnnealing3,"data_cleaning/NCAnnealing3.shp",append=F)
+load("data_cleaning/NCDataSub.RData")
+Anneal_30K_500_2_2_10KB = NCDataSub
+Anneal_30K_500_2_2_10KB$district = V(g)$district
+sum(NCDataSub$district == Anneal_30K_500_2_2_10KB$district)
+save(Anneal_30K_500_2_2_10KB, file="data_cleaning/Anneal_30K_500_2_2_10KB.RData")
+st_write(Anneal_30K_500_2_2_10KB,"data_cleaning/Anneal_30K_500_2_2_10KB.shp",append=F)
 
+# save the outputs
+A30K_500_2_2_Sample1_1 = data.frame("type"=rep(1,N),"balanced"=balanced,
+                                "compact"=compact,
+                "tied"=tied, "accepted"=accepted,"J"=J,"proposal"=proposal,
+                "redseats"=redseats)
+save(A30K_500_2_2_Sample1_1,
+     file="../Data/Runs/A30K_500_2_2_Sample1_1.RData")
 
 

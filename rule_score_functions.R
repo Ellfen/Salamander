@@ -7,44 +7,44 @@ f.is.contigous1 = function(distID, G, district) {
 }
 
 # Checks if a division on G is contigous. Returns 1 if TRUE and 0 if FALSE
-f.is.contigous2 = function(distID, G, district) {
-  # Choose a starting vertex uniformly from the district vertices
-  v0 = sample(which(district==distID),1)
-  # generate a vector of neighbors
-  v.neighbors = as.vector(neighbors(G,v0))
-  # restrict neighbors to vertices in the same district
-  # add these to a queue of vertices to search
-  queue = c(v0,v.neighbors[which(district[v.neighbors]==distID)])
-  # add queued vertices to explored vector to avoid checking them twice
-  explored=queue
-  # loop until all vertices in district are searched
-  while (length(queue) > 0) {
-    for (i in 1:length(queue)) {
-      # get neighbors
-      v.neighbors = as.vector(neighbors(G,queue[1]))
-      # restrict neighbors to those in district
-      q = v.neighbors[which(district[v.neighbors]==distID)]
-      # restrict neighbors to those not explored
-      q = setdiff(q,explored)
-      # update the queue
-      queue = c(queue[-1],q)
-      # update explored
-      explored=c(explored,q)
-    }
-  }
-  # each district should have a unique sum - check if the sum of vertices in the
-  # district matches the sum of vertices explored
-  #check1 = as.integer(sum(explored)== 
-                        #sum(which(partition==distID)))
-  # As a backup also check if the length of explored equals no.of vertices
-  #check2 = as.integer(length(explored)==
-                        #length(which(partition==distID)))
-  # If both checks are true then the district is connected
-  #is.contigous = as.integer(check1 & check2)
-  #is.contigous 
-  #print(explored)
-  is.contigous = as.integer(length(explored)==length(which(district==distID)))
-}
+# f.is.contigous2 = function(distID, G, district) {
+#   # Choose a starting vertex uniformly from the district vertices
+#   v0 = sample(which(district==distID),1)
+#   # generate a vector of neighbors
+#   v.neighbors = as.vector(neighbors(G,v0))
+#   # restrict neighbors to vertices in the same district
+#   # add these to a queue of vertices to search
+#   queue = c(v0,v.neighbors[which(district[v.neighbors]==distID)])
+#   # add queued vertices to explored vector to avoid checking them twice
+#   explored=queue
+#   # loop until all vertices in district are searched
+#   while (length(queue) > 0) {
+#     for (i in 1:length(queue)) {
+#       # get neighbors
+#       v.neighbors = as.vector(neighbors(G,queue[1]))
+#       # restrict neighbors to those in district
+#       q = v.neighbors[which(district[v.neighbors]==distID)]
+#       # restrict neighbors to those not explored
+#       q = setdiff(q,explored)
+#       # update the queue
+#       queue = c(queue[-1],q)
+#       # update explored
+#       explored=c(explored,q)
+#     }
+#   }
+#   # each district should have a unique sum - check if the sum of vertices in the
+#   # district matches the sum of vertices explored
+#   #check1 = as.integer(sum(explored)== 
+#                         #sum(which(partition==distID)))
+#   # As a backup also check if the length of explored equals no.of vertices
+#   #check2 = as.integer(length(explored)==
+#                         #length(which(partition==distID)))
+#   # If both checks are true then the district is connected
+#   #is.contigous = as.integer(check1 & check2)
+#   #is.contigous 
+#   #print(explored)
+#   is.contigous = as.integer(length(explored)==length(which(district==distID)))
+# }
 
 # How chosen to implement the test of population in this way as (i) it is the
 # way the UK rule on population difference is meant to be implemented (ii) it
@@ -65,14 +65,14 @@ f.is.balanced = function(distID, G, district, bound, pop_ideal) {
   is.balanced
 }
 
-f.contigscore = function(G,district,Ndist) {
-  contiguous_check = numeric(Ndist)
-  for (i in 1:Ndist) {
-    contiguous_check[i] = f.is.contigous1(i,G,district)
-  }
-  Jg = 1/sum(contiguous_check)
-  Jg
-}
+# f.contigscore = function(G,district,Ndist) {
+#   contiguous_check = numeric(Ndist)
+#   for (i in 1:Ndist) {
+#     contiguous_check[i] = f.is.contigous1(i,G,district)
+#   }
+#   Jg = 1/sum(contiguous_check)
+#   Jg
+# }
 
 f.popscore = function(G,district,pop_ideal,Ndist){
   #Ndist = length(unique(district))-1
@@ -165,18 +165,18 @@ f.roeck = function(G,district,Ndist) {
 }
 
 # Compactness score
-f.compactscore = function(G,district,p1,p2,Ndist) {
-  #Ndist = length(unique(district))-1
-  boundary = area = numeric(Ndist)
-  #print(boundary)
-  #print(area)
-  for (i in 1:Ndist) {
-    conflicts = c(which(temp_p1==i&temp_p2!=i),which(temp_p2==i&temp_p1!=i))
-    boundary[i] = sum(E(g)$weight[conflicts])
-    area[i] = sum(V(G)$area[which(district==i)])
-  }
-  #print(boundary)
-  #print(area)
-  Ji = sum(boundary^2/area)
-  Ji
-}
+# f.compactscore = function(G,district,p1,p2,Ndist) {
+#   #Ndist = length(unique(district))-1
+#   boundary = area = numeric(Ndist)
+#   #print(boundary)
+#   #print(area)
+#   for (i in 1:Ndist) {
+#     conflicts = c(which(temp_p1==i&temp_p2!=i),which(temp_p2==i&temp_p1!=i))
+#     boundary[i] = sum(E(g)$weight[conflicts])
+#     area[i] = sum(V(G)$area[which(district==i)])
+#   }
+#   #print(boundary)
+#   #print(area)
+#   Ji = sum(boundary^2/area)
+#   Ji
+# }

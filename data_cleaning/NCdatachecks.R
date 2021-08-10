@@ -240,21 +240,19 @@ sort(unique(NCData$district))
 length(NCData$district)
 unique(NCData$district)
 
-# My district information might be wrong
-
-
 # Want to add the area information
 setdiff(NCData$unitID, NC2012shp$GEOID10)
 sum(NCData$unitID==NC2012shp$GEOID10)
 # These codes are the same and they are already in the same order
 NCData$area = NC2012shp$AREA
 # To save without geometry
-save(NCData,file="NCData.RData")
+# save(NCData,file="NCData.RData")
 
 ###############################################################################
 # To add geometry to existing file - can just run from here and run very
-# beginning that loads NC2012shp
-load("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCData.RData")
+# beginning that loads NC2012shp - need to uncomment load!!!
+#load("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCData.RData")
+
 NCDataGeom = NCData
 setdiff(NCDataGeom$unitID,NC2012shp$GEOID10)
 sum(NCDataGeom$unitID==NC2012shp$GEOID10)
@@ -287,7 +285,8 @@ centroids = matrix(unlist(centroids), ncol = 2, byrow = TRUE)
 centroids[1:10,]
 NC2012shp$INTPTLAT10[1:10]
 NC2012shp$INTPTLON10[1:10]
-# it goes long lat
+# it goes long lat 
+# Transform to grid references!
 centroids = latlong2grid(centroids)
 head(centroids)
 
@@ -301,14 +300,15 @@ NCDataGeom$geometry = NC2012shp$geometry
 
 names(NCDataGeom)
 head(NCDataGeom)
+
 # Before saving add a name column
 NCDataGeom$name = 1:dim(NCDataGeom)[1]
 NCDataGeom = NCDataGeom[,c(dim(NCDataGeom)[2],1:(dim(NCDataGeom)[2]-1))]
 head(NCDataGeom)
 
 # To save complete NC shapefile
-save(NCDataGeom,file="NCDataGeom.RData")
-st_write(NCDataGeom,"NCDataGeom.shp", append=F)
+# save(NCDataGeom,file="NCDataGeom.RData")
+# st_write(NCDataGeom,"NCDataGeom.shp", append=F)
 
 # Subset of districts 5,9,10,11,12
 NCDataSub = NCDataGeom
@@ -330,5 +330,34 @@ NCDataSub$district[which(NCDataSub$district==12)] = 5
 
 unique(NCDataSub$district)
 
-save(NCDataSub,file="NCDataSub.RData")
-st_write(NCDataSub,"NCDataSub.shp", append=F)
+save(NCDataSub,file="NCOriginal.RData")
+st_write(NCDataSub,"NCOriginal.shp", append=F)
+
+# Change what population information is used 
+# Voting Age
+NCVotingAge = NCDataSub
+NCVotingAge$population = NC2010pop$PL10VA_TOT[-index]
+sum(NCVotingAge$population==NCDataSub$population)
+save(NCVotingAge,file="NCVotingAge.RData")
+st_write(NCVotingAge,"NCVotingAge.shp", append=F)
+
+# Registered voters
+NCRegistered = NCDataSub
+NCRegistered$population = NC2010pop$REG10G_TOT[-index]
+sum(NCRegistered$population==NCDataSub$population)
+save(NCRegistered, file="NCRegistered.RData")
+st_write(NCRegistered,"NCRegistered.shp",append=F)
+
+# Alternative starting map
+library(sf)
+load("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCOriginal.RData")
+NCRejig = NCDataSub
+sum(NCRejig$population==NCDataSub$population)
+NCRejig = NCDataSub[order(NCRejig$centroidx,NCRejig$centroidy),]
+1060/5
+NCRejig$district = rep(1:5,each=212)
+NCRejig = NCRejig[order(NCRejig$name),]
+save(NCRejig, file="NCRejig.RData")
+st_write(NCRejig,"NCRejig.shp",append=F)
+
+

@@ -153,26 +153,26 @@ f.graph40 = function() {
 
 # Function to determine which vertices are on the perimeter - add a perimeter 
 # node with id no. nodes+1 and add the external edges.
-f.perimeter = function(g,nodes) {
-  # Perimeter nodes are identified by creating a subgraph of the neighbors and 
-  # checking whether the degree of any of theses is 0 or 1. This indicates 
-  # no cyclical path around vertex.
-  for (i in 1:length(V(g))) {
-    gneighbors = induced_subgraph(g,neighbors(g,i))
-    deg = degree(gneighbors)
-    V(g)$external[i] = ifelse(1 %in% deg | 0 %in% deg, 1, 0)
-  }
-  #print(V(g)$external)
-  # Before you add the edges you need to add perimeter vertex
-  g = g + vertex(nodes+1,population=0,votes_blue=0,
-                 votes_red=0,district=0,size=0,external=0)
-  # Add edge information
-  c=cbind(rep(nodes+1, sum(V(g)$external)),which(V(g)$external==1))
-  c=t(c)
-  c=as.vector(c)
-  g = g + edges(c, weight=1)
-  #print(get.edgelist(g))
-  g
-}
+# f.perimeter = function(g,nodes) {
+#   # Perimeter nodes are identified by creating a subgraph of the neighbors and 
+#   # checking whether the degree of any of theses is 0 or 1. This indicates 
+#   # no cyclical path around vertex.
+#   for (i in 1:length(V(g))) {
+#     gneighbors = induced_subgraph(g,neighbors(g,i))
+#     deg = degree(gneighbors)
+#     V(g)$external[i] = ifelse(1 %in% deg | 0 %in% deg, 1, 0)
+#   }
+#   #print(V(g)$external)
+#   # Before you add the edges you need to add perimeter vertex
+#   g = g + vertex(nodes+1,population=0,votes_blue=0,
+#                  votes_red=0,district=0,size=0,external=0)
+#   # Add edge information
+#   c=cbind(rep(nodes+1, sum(V(g)$external)),which(V(g)$external==1))
+#   c=t(c)
+#   c=as.vector(c)
+#   g = g + edges(c, weight=1)
+#   #print(get.edgelist(g))
+#   g
+# }
 
 

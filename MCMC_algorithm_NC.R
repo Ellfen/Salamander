@@ -278,6 +278,7 @@ mean(compact)
 min(compact)
 max(compact)
 mean(tied)
+admissible = as.integer(balanced&tied)
 mean(admissible)
 mean(accepted)
 
@@ -302,18 +303,26 @@ hist(outcome$blueseats, freq=F,
 
 # save the new district info
 load("data_cleaning/NCDataSub.RData")
-Anneal_30K_500_2_2_10KB = NCDataSub
-Anneal_30K_500_2_2_10KB$district = V(g)$district
-sum(NCDataSub$district == Anneal_30K_500_2_2_10KB$district)
-save(Anneal_30K_500_2_2_10KB, file="data_cleaning/Anneal_30K_500_2_2_10KB.RData")
-st_write(Anneal_30K_500_2_2_10KB,"data_cleaning/Anneal_30K_500_2_2_10KB.shp",append=F)
+A30K_500_2_2_District1_2 = NCDataSub
+A30K_500_2_2_District1_2$district = V(g)$district
+sum(NCDataSub$district == A30K_500_2_2_District1_2$district)
+save(A30K_500_2_2_District1_2, 
+     file="../Data/Runs/Shp/A30K_500_2_2_District1_2.RData")
+st_write(A30K_500_2_2_District1_2,
+         "../Data/Runs/Shp/A30K_500_2_2_District1_2.shp",append=F)
 
 # save the outputs
-A30K_500_2_2_Sample1_1 = data.frame("type"=rep(1,N),"balanced"=balanced,
-                                "compact"=compact,
-                "tied"=tied, "accepted"=accepted,"J"=J,"proposal"=proposal,
-                "redseats"=redseats)
-save(A30K_500_2_2_Sample1_1,
-     file="../Data/Runs/A30K_500_2_2_Sample1_1.RData")
+A30K_500_2_2_Sample1_2 = data.frame("balanced"=balanced,
+                                    "compact"=compact,
+                                    "tied"=tied, 
+                                    "accepted"=accepted,
+                                    "J"=J, 
+                                    "Jp"=Jpy,
+                                    "Ji"=Jiy,
+                                    "Jc"=Jcy,
+                                    "proposal"=proposal,
+                                    "redseats"=redseats)
+save(A30K_500_2_2_Sample1_2,
+     file="../Data/Runs/A30K_500_2_2_Sample1_2.RData")
 
 

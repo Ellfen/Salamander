@@ -134,10 +134,10 @@ a = c(1525,1527,1528)
 for (j in 1:3) {
 set.seed(a[j])
 # Boundary flip in a loop
-N = 1
+N = 10
 # information to store
 balanced = accepted = admissible = numeric(N)
-Jpx = Jpy = Jcx = Jcy = Jix = Jiy = numeric(N)
+Jpx = Jpy = Jcx = Jcy = Jix = Jiy = effgap = numeric(N)
 tic()
 for (i in 1:N) {
   print(i)
@@ -203,6 +203,7 @@ for (i in 1:N) {
     E(g)$p2 = E(g)$p2
   }
   ##########################################################################
+  effgap[i] = f.seat.eff(g,Ndist)$egap
 }
 toc()
 # 6675 secs for 10000, 111 minutes, approx 2 hours

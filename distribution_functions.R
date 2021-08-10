@@ -28,3 +28,31 @@ f.seat.red = function(G,Ndist) {
   #print(seats)
   sum(seats)
 }
+
+f.seat.eff = function(G,Ndist) {
+  total=numeric(2)
+  seats=numeric(Ndist)
+  wasted=matrix(nrow=Ndist,ncol=2)
+  for (i in 1:Ndist) {
+    # total democrate vote
+    total[1] = sum(vertex_attr(G,"blue")[which(V(G)$district == i)])
+    # total republican vote
+    total[2] = sum(vertex_attr(G,"red")[which(V(G)$district == i)])
+    #print(total)
+    seats[i] = ifelse(total[2] >= total[1], 1, 0)
+    if (total[2] >= total[1]){
+      # red wins
+      wasted[i,1] = total[1]
+      wasted[i,2] = total[2] - 0.5*(total[1]+total[2])
+    } else {
+      # blue wins
+      wasted[i,1] = total[1] - 0.5*(total[1]+total[2])
+      wasted[i,2] = total[2]
+    }
+  }
+  #print(seats)
+  seats = sum(seats)
+  egap = (colSums(wasted)[1] - colSums(wasted)[2])/(sum(V(G)$blue)+sum(V(G)$red))
+  out = list("seats"=seats,"egap"=egap)
+  return(out)
+}

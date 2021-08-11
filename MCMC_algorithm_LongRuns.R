@@ -17,6 +17,7 @@ Ncounty = 38
 
 ## CHOOSE WHICH SHAPEFILE TO READ ##
 NCshp = st_read("data_cleaning/NCRejig.shp")
+#NCshp = st_read("../Data/Runs/LR/SHP/NCRejigH20K.shp")
 
 # Create the graph
 P.data = as.data.frame(NCshp)
@@ -143,7 +144,7 @@ wp = 500
 wi = 2
 wc = 2
 ################################### HEATING #################################
-N = 20e3
+N = 40e3
 beta = 0
 # information to store
 balanced = accepted = admissible = compact = tied = numeric(N)
@@ -233,7 +234,7 @@ print("Heating Finished")
 # save the new district info
 
 # save the outputs
-REJIG_500_2_2_H = data.frame("balanced"=balanced,
+REJIG_500_2_2_H40K = data.frame("balanced"=balanced,
                                     "compact"=compact,
                                     "tied"=tied, 
                                     "accepted"=accepted,
@@ -244,13 +245,13 @@ REJIG_500_2_2_H = data.frame("balanced"=balanced,
                                     "proposal"=proposal,
                                     "redseats"=redseats,
                                     "effgap"=effgap)
-save(REJIG_500_2_2_H,
-     file="../Data/Runs/LR/REJIG_500_2_2_H.RData")
-REJIG_D = data.frame("H"=V(g)$district,"A"=rep(1,nodes),"S"=rep(1,nodes))
+save(REJIG_500_2_2_H40K,
+     file="../Data/Runs/LR/REJIG_500_2_2_H40K.RData")
+REJIG_D40K = data.frame("H"=V(g)$district,"A"=rep(1,nodes),"S"=rep(1,nodes))
 
 
 ################################### COOLING #################################
-N = 30e3
+N = 60e3
 beta = 0
 # information to store
 balanced = accepted = admissible = compact = tied = numeric(N)
@@ -340,7 +341,7 @@ print("Cooling Finished")
 # save the new district info
 
 # save the outputs
-REJIG_500_2_2_C = data.frame("balanced"=balanced,
+REJIG_500_2_2_C60K = data.frame("balanced"=balanced,
                              "compact"=compact,
                              "tied"=tied, 
                              "accepted"=accepted,
@@ -351,9 +352,9 @@ REJIG_500_2_2_C = data.frame("balanced"=balanced,
                              "proposal"=proposal,
                              "redseats"=redseats,
                              "effgap"=effgap)
-save(REJIG_500_2_2_C,
-     file="../Data/Runs/LR/REJIG_500_2_2_C.RData")
-REJIG_D$A = V(g)$district
+save(REJIG_500_2_2_C60K,
+     file="../Data/Runs/LR/REJIG_500_2_2_C60K.RData")
+REJIG_D40K$A = V(g)$district
 
 ################################## SAMPLING #################################
 N = 100e3
@@ -430,6 +431,7 @@ for (i in 1:N) {
   accepted[i] = ifelse(U <= alpha, 1,0)
   # Accept or reject proposal
   if (U <= alpha){
+    print(N)
     V(g)$district[v.flip] = dist_y
     E(g)$p1 = temp_p1
     E(g)$p2 = temp_p2
@@ -446,7 +448,7 @@ print("Sampling Finished")
 # save the new district info
 
 # save the outputs
-REJIG_500_2_2_S = data.frame("balanced"=balanced,
+REJIG_500_2_2_S100K = data.frame("balanced"=balanced,
                              "compact"=compact,
                              "tied"=tied, 
                              "accepted"=accepted,
@@ -457,11 +459,11 @@ REJIG_500_2_2_S = data.frame("balanced"=balanced,
                              "proposal"=proposal,
                              "redseats"=redseats,
                              "effgap"=effgap)
-save(REJIG_500_2_2_S,
-     file="../Data/Runs/LR/REJIG_500_2_2_S.RData")
-REJIG_D$S = V(g)$district
+save(REJIG_500_2_2_S100K,
+     file="../Data/Runs/LR/REJIG_500_2_2_S100K.RData")
+REJIG_D40K$S = V(g)$district
 
-save(REJIG_D, file="../Data/Runs/LR/REJIG_D.RData")
+save(REJIG_D40K, file="../Data/Runs/LR/REJIG_D40K.RData")
 
 ############################ PRELIMINARY ANALYSIS ############################
 
@@ -484,28 +486,28 @@ plot(J,type="l")
 # Store info on how many admissible, how many balanced, and how many accepted
 # When beta = 0 then mean(admissible) approx mean(accepted)
 mean(balanced)
-mean(compact)
+mean(tied)
 min(compact)
 max(compact)
-mean(tied)
+length(compact[which(compact <= 6)])/N
+min(Jiy)
+max(Jiy)
+length(Jiy[which(Jiy <= 20)])/N
 admissible = as.integer(balanced&tied)
 mean(admissible)
 mean(accepted)
 
-mean(Jiy)
-min(Jiy)
-max(Jiy)
-length(Jiy[which(Jiy <= 20)])/N
-
 outcome = data.frame("accepted"=accepted,"admissible"=admissible,
-                     "redseats"=redseats)
+                     "redseats"=redseats, "effgap"=effgap)
+outcome = outcome[80000:100000,]
 outcome = outcome[-which(outcome$accepted==0),]
+outcome = outcome[-which(outcome$admissible==0),]
 outcome$blueseats = Ndist - outcome$redseats
 
 par(mfrow=c(1,2),mar=c(3,3,3,3)+0.1)
 hist(outcome$redseats, freq=F,
      breaks=seq(min(outcome$redseats)-0.5, max(outcome$redseats)+0.5, by=1))
-#red_seats
 hist(outcome$blueseats, freq=F,
      breaks=seq(min(outcome$blueseats)-0.5, max(outcome$blueseats)+0.5, by=1))
-hist(effgap)
+par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1)
+hist(outcome$effgap,freq=F,breaks=50)

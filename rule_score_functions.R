@@ -174,19 +174,19 @@ f.roeck = function(G,district,Ndist) {
   return(roeck_list)
 }
 
-# Compactness score
-# f.compactscore = function(G,district,p1,p2,Ndist) {
-#   #Ndist = length(unique(district))-1
-#   boundary = area = numeric(Ndist)
-#   #print(boundary)
-#   #print(area)
-#   for (i in 1:Ndist) {
-#     conflicts = c(which(temp_p1==i&temp_p2!=i),which(temp_p2==i&temp_p1!=i))
-#     boundary[i] = sum(E(g)$weight[conflicts])
-#     area[i] = sum(V(G)$area[which(district==i)])
-#   }
-#   #print(boundary)
-#   #print(area)
-#   Ji = sum(boundary^2/area)
-#   Ji
-# }
+# Polsby-popper score
+f.compactscore = function(G,district,p1,p2,Ndist) {
+  #Ndist = length(unique(district))-1
+  boundary = area = numeric(Ndist)
+  #print(boundary)
+  #print(area)
+  for (i in 1:Ndist) {
+    conflicts = c(which(temp_p1==i&temp_p2!=i),which(temp_p2==i&temp_p1!=i))
+    boundary[i] = sum(E(g)$weight[conflicts])
+    area[i] = sum(V(G)$area[which(district==i)])
+  }
+  #print(boundary)
+  #print(area)
+  Ji = sum(boundary^2/area)
+  Ji
+}

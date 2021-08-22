@@ -6,8 +6,8 @@ source("network_functions.R")
 source("rule_score_functions.R")
 source("distribution_functions.R")
 # Acceptance probability function f.alpha
-f.alpha = function(Qxy,Qyx,score_x,score_y,admissible){
-  value = min((Qyx*score_y*admissible)/(Qxy*score_x),1)
+f.alpha = function(Qxy,Qyx,score_x,score_y){
+  value = min((Qyx*score_y)/(Qxy*score_x),1)
   ifelse(is.nan(value),0,value)
 }
 f.Q = function(conflicts){1/(2*length(conflicts))}
@@ -16,8 +16,9 @@ Ndist = 5
 Ncounty = 38 
 
 ## CHOOSE WHICH SHAPEFILE TO READ ##
-NCshp = st_read("data_cleaning/NCRejig.shp")
+NCshp = st_read("data_cleaning/NCOriginal.shp")
 #NCshp = st_read("../Data/Runs/LR/SHP/NCRejigH20K.shp")
+load("../Data/Runs/LR/REAL_D3.RData")
 
 # Create the graph
 P.data = as.data.frame(NCshp)
@@ -39,12 +40,17 @@ g = graph_from_data_frame(E.data, directed = FALSE,
 nodes = vcount(g)
 
 # ABSORB DISCONTINUOUS NODES
-yes = 0
-if (yes == 1) {
+absorb = 0
+if (absorb == 1) {
   V(g)$district[which(V(g)$name=="197")] = 1
   V(g)$district[which(V(g)$name=="208")] = 1
   V(g)$district[which(V(g)$name=="221")] = 1
   V(g)$district[which(V(g)$name=="218")] = 1
+}
+
+swap = 1
+if (swap == 1) {
+  V(g)$district = REAL_D3$H
 }
 
 # Setup the plotting information
@@ -60,12 +66,12 @@ graph_attr(g,"margin") = rep(0.01,4)
 par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
 plot(g, asp=0, vertex.color=vcolor[V(g)$district], 
      vertex.frame.color=vcolor[V(g)$district], 
-     main="Alternative Initial District Assignment")
+     main="The Enacted Electoral Map")
 legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
 # CHANGE THE FILE NAME
-dev.copy2pdf(file="../Images/Alternative_init.pdf")
+dev.copy2pdf(file="../Images/Real_init3.pdf")
 
 
 # The edgelist won't change so create it now
@@ -136,6 +142,14 @@ for (i in 1:Ncounty) {
 split2
 split3
 split4
+############################## DISTRIBUTIONS ###################################
+f.seat.eff(g,Ndist)
+Jp = f.popscore(g,V(g)$district,pop_ideal,Ndist)
+Jc = f.countyscore(g,V(g)$district,Mc,Ncounty)$Jc
+Ji = f.roeck(g,V(g)$district,Ndist)$Ji
+J = (wp*Jp+wc*Jc+wi*Ji)
+
+
 
 #set.seed(1525)
 #set.seed(1527)
@@ -144,7 +158,7 @@ wp = 500
 wi = 2
 wc = 2
 ################################### HEATING #################################
-N = 40e3
+N = 40000
 beta = 0
 # information to store
 balanced = accepted = admissible = compact = tied = numeric(N)
@@ -190,7 +204,7 @@ for (i in 1:N) {
   J[i] = (wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i])
   score_y = exp(-beta*J[i])
   # Check if proposal is balanced/compact/tied - store this information
-  balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
+  balanced[i] = f.is.balanced2(Ndist,g,temp_dist,pop_bound,pop_ideal)
   compact[i] = roeck$compact
   tied[i] = c$tied
   d = f.seat.eff(g,Ndist)
@@ -201,7 +215,7 @@ for (i in 1:N) {
   Qxy = f.Q(conflict_x)
   conflict_y = which(temp_p1 != temp_p2)#which(temp_p1[1:(Eint-1)] != temp_p2[1:(Eint-1)])
   Qyx = f.Q(conflict_y)
-  alpha = f.alpha(Qxy,Qyx,score_x,score_y,contigous)
+  alpha = f.alpha(Qxy,Qyx,score_x,score_y)
   # generate a uniform random variable
   U = runif(1)
   
@@ -215,9 +229,9 @@ for (i in 1:N) {
   #       "score_y=",score_y,sep=" ","\n")
   # }
   
-  accepted[i] = ifelse(U <= alpha, 1,0)
+  accepted[i] = ifelse((U <= alpha) & (contigous == 1), 1,0)
   # Accept or reject proposal
-  if (U <= alpha){
+  if ((U <= alpha) & (contigous == 1)){
     V(g)$district[v.flip] = dist_y
     E(g)$p1 = temp_p1
     E(g)$p2 = temp_p2
@@ -228,30 +242,41 @@ for (i in 1:N) {
   }
   ##########################################################################
   #beta = beta + (1/(N-1))
+  print(i)
 }
 toc()
 print("Heating Finished")
 # save the new district info
 
 # save the outputs
-REJIG_500_2_2_H40K = data.frame("balanced"=balanced,
+REAL_500_2_2_H4 = data.frame("balanced"=balanced,
                                     "compact"=compact,
-                                    "tied"=tied, 
+                                    "tied"=tied,
                                     "accepted"=accepted,
-                                    "J"=J, 
+                                    "J"=J,
                                     "Jp"=Jpy,
                                     "Ji"=Jiy,
                                     "Jc"=Jcy,
                                     "proposal"=proposal,
                                     "redseats"=redseats,
                                     "effgap"=effgap)
-save(REJIG_500_2_2_H40K,
-     file="../Data/Runs/LR/REJIG_500_2_2_H40K.RData")
-REJIG_D40K = data.frame("H"=V(g)$district,"A"=rep(1,nodes),"S"=rep(1,nodes))
+save(REAL_500_2_2_H4,
+     file="../Data/Runs/LR/REAL_500_2_2_H4.RData")
+REAL_D4 = data.frame("H"=V(g)$district,"A"=rep(1,nodes),"S"=rep(1,nodes))
 
+# CHANGE THE PLOT TITLE
+par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
+plot(g, asp=0, vertex.color=vcolor[V(g)$district],
+      vertex.frame.color=vcolor[V(g)$district],
+      main="The Enacted Map After Heating")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5"),
+       col=vcolor[1:5],pch=19)#,bty="n")
+# CHANGE THE FILE NAME
+dev.copy2pdf(file="../Images/Real_H4.pdf")
 
 ################################### COOLING #################################
-N = 60e3
+N = 60000
 beta = 0
 # information to store
 balanced = accepted = admissible = compact = tied = numeric(N)
@@ -297,7 +322,7 @@ for (i in 1:N) {
   J[i] = (wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i])
   score_y = exp(-beta*J[i])
   # Check if proposal is balanced/compact/tied - store this information
-  balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
+  balanced[i] = f.is.balanced2(Ndist,g,temp_dist,pop_bound,pop_ideal)
   compact[i] = roeck$compact
   tied[i] = c$tied
   d = f.seat.eff(g,Ndist)
@@ -308,7 +333,7 @@ for (i in 1:N) {
   Qxy = f.Q(conflict_x)
   conflict_y = which(temp_p1 != temp_p2)#which(temp_p1[1:(Eint-1)] != temp_p2[1:(Eint-1)])
   Qyx = f.Q(conflict_y)
-  alpha = f.alpha(Qxy,Qyx,score_x,score_y,contigous)
+  alpha = f.alpha(Qxy,Qyx,score_x,score_y)
   # generate a uniform random variable
   U = runif(1)
   
@@ -322,9 +347,9 @@ for (i in 1:N) {
   #       "score_y=",score_y,sep=" ","\n")
   # }
   
-  accepted[i] = ifelse(U <= alpha, 1,0)
+  accepted[i] = ifelse((U <= alpha) & (contigous == 1), 1,0)
   # Accept or reject proposal
-  if (U <= alpha){
+  if ((U <= alpha) & (contigous == 1)){
     V(g)$district[v.flip] = dist_y
     E(g)$p1 = temp_p1
     E(g)$p2 = temp_p2
@@ -335,35 +360,50 @@ for (i in 1:N) {
   }
   ##########################################################################
   beta = beta + (1/(N-1))
+  print(i)
 }
 toc()
 print("Cooling Finished")
 # save the new district info
 
 # save the outputs
-REJIG_500_2_2_C60K = data.frame("balanced"=balanced,
+REAL_500_2_2_C4 = data.frame("balanced"=balanced,
                              "compact"=compact,
-                             "tied"=tied, 
+                             "tied"=tied,
                              "accepted"=accepted,
-                             "J"=J, 
+                             "J"=J,
                              "Jp"=Jpy,
                              "Ji"=Jiy,
                              "Jc"=Jcy,
                              "proposal"=proposal,
                              "redseats"=redseats,
                              "effgap"=effgap)
-save(REJIG_500_2_2_C60K,
-     file="../Data/Runs/LR/REJIG_500_2_2_C60K.RData")
-REJIG_D40K$A = V(g)$district
+save(REAL_500_2_2_C4,
+     file="../Data/Runs/LR/REAL_500_2_2_C4.RData")
+REAL_D4$A = V(g)$district
+
+# CHANGE THE PLOT TITLE
+par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
+plot(g, asp=0, vertex.color=vcolor[V(g)$district],
+      vertex.frame.color=vcolor[V(g)$district],
+      main="The Enacted Map After Cooling")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5"),
+       col=vcolor[1:5],pch=19)#,bty="n")
+# CHANGE THE FILE NAME
+dev.copy2pdf(file="../Images/Real_C4.pdf")
+
 
 ################################## SAMPLING #################################
-N = 100e3
+N = 150000
 beta = 1
 # information to store
-balanced = accepted = admissible = compact = tied = numeric(N)
+balanced = accepted = admissible = compact = tied = contigous = numeric(N)
 J = Jiy = Jpy = Jcy = numeric(N)
 redseats = effgap = numeric(N)
 proposal = numeric(N)
+D = matrix(NA, nrow=nodes,ncol=0.4*N)
+j=1
 
 tic()
 for (i in 1:N) {
@@ -393,7 +433,7 @@ for (i in 1:N) {
   temp_p1[which(Elist[,1]==v.flip)] = temp_dist[v.flip]
   temp_p2[which(Elist[,2]==v.flip)] = temp_dist[v.flip]
   # Check if proposal is contigous
-  contigous = f.is.contigous1(dist_x,g,temp_dist)
+  contigous[i] = f.is.contigous1(dist_x,g,temp_dist)
   # Evaluate the score functions
   Jpy[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
   c = f.countyscore(g,temp_dist,Mc,Ncounty)
@@ -403,7 +443,7 @@ for (i in 1:N) {
   J[i] = (wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i])
   score_y = exp(-beta*J[i])
   # Check if proposal is balanced/compact/tied - store this information
-  balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
+  balanced[i] = f.is.balanced2(Ndist,g,temp_dist,pop_bound,pop_ideal)
   compact[i] = roeck$compact
   tied[i] = c$tied
   d = f.seat.eff(g,Ndist)
@@ -414,7 +454,7 @@ for (i in 1:N) {
   Qxy = f.Q(conflict_x)
   conflict_y = which(temp_p1 != temp_p2)#which(temp_p1[1:(Eint-1)] != temp_p2[1:(Eint-1)])
   Qyx = f.Q(conflict_y)
-  alpha = f.alpha(Qxy,Qyx,score_x,score_y,contigous)
+  alpha = f.alpha(Qxy,Qyx,score_x,score_y)
   # generate a uniform random variable
   U = runif(1)
   
@@ -428,13 +468,14 @@ for (i in 1:N) {
   #       "score_y=",score_y,sep=" ","\n")
   # }
   
-  accepted[i] = ifelse(U <= alpha, 1,0)
+  accepted[i] = ifelse((U <= alpha) & (contigous[i] == 1), 1,0)
   # Accept or reject proposal
-  if (U <= alpha){
-    print(N)
+  if ((U <= alpha) & (contigous[i] == 1)){
     V(g)$district[v.flip] = dist_y
     E(g)$p1 = temp_p1
     E(g)$p2 = temp_p2
+    D[,j] = V(g)$district
+    j=j+1
   } else {
     V(g)$district[v.flip] = dist_x
     E(g)$p1 = E(g)$p1
@@ -442,72 +483,202 @@ for (i in 1:N) {
   }
   ##########################################################################
   #beta = beta + (1/(N-1))
+  print(i)
 }
 toc()
 print("Sampling Finished")
 # save the new district info
 
 # save the outputs
-REJIG_500_2_2_S100K = data.frame("balanced"=balanced,
+REAL_500_2_2_S4 = data.frame("balanced"=balanced,
                              "compact"=compact,
-                             "tied"=tied, 
+                             "tied"=tied,
                              "accepted"=accepted,
-                             "J"=J, 
+                             "J"=J,
                              "Jp"=Jpy,
                              "Ji"=Jiy,
                              "Jc"=Jcy,
                              "proposal"=proposal,
                              "redseats"=redseats,
                              "effgap"=effgap)
-save(REJIG_500_2_2_S100K,
-     file="../Data/Runs/LR/REJIG_500_2_2_S100K.RData")
-REJIG_D40K$S = V(g)$district
+save(REAL_500_2_2_S4,
+     file="../Data/Runs/LR/REAL_500_2_2_S4.RData")
 
-save(REJIG_D40K, file="../Data/Runs/LR/REJIG_D40K.RData")
+REAL_D4$S = V(g)$district
+
+save(REAL_D4, file="../Data/Runs/LR/REAL_D4.RData")
+save(D4, file="../Data/Runs/LR/matrixD4.RData")
 
 ############################ PRELIMINARY ANALYSIS ############################
-
-unique_proposals = length(unique(proposal))
-length(which(E(g)$p1 != E(g)$p2))
-par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
-hist(proposal,breaks = unique_proposals)
 
 # Plot after 
 par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
 plot(g,asp=0, vertex.color=vcolor[(V(g)$district)], 
-     vertex.frame.color=vcolor[V(g)$district], main="15K Steps")
+     vertex.frame.color=vcolor[V(g)$district], 
+     main="A Reasonable Redistrict Example")
 legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
+dev.copy2pdf(file="../Images/Real_end3.pdf")
 
 mean(J)
-plot(J,type="l")
+plot(J,type="l",main="The score function, J, of the proposals")
+hist(J)
+dev.copy2pdf(file="../Images/Real_J3.pdf")
+
+a = 1
+b = 4915
+
+unique_proposals = unique(proposal[a:b])
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
+hist(proposal[a:b],breaks = length(unique_proposals),main="Histogram of proposals")
+dev.copy2pdf(file="../Images/Real_proposals3.pdf")
+
+vertex_color = V(g)$district
+vertex_color[unique_proposals] = 6
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
+plot(g,asp=0, vertex.color=vcolor[V(g)$district], 
+     vertex.frame.color=vcolor[vertex_color],
+     main="2011 Map Proposed Vertices")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5","Proposed Vertices"),
+       col=vcolor[1:6],pch=c(rep(19,5),1))#,bty="n")
 
 # Store info on how many admissible, how many balanced, and how many accepted
 # When beta = 0 then mean(admissible) approx mean(accepted)
-mean(balanced)
-mean(tied)
-min(compact)
-max(compact)
-length(compact[which(compact <= 6)])/N
+mean(balanced[a:b])
+mean(tied[a:b])
+min(compact[a:b])
+max(compact[a:b])
+length(compact[which(compact[a:b] <= 7.5)])/N
 min(Jiy)
 max(Jiy)
-length(Jiy[which(Jiy <= 20)])/N
-admissible = as.integer(balanced&tied)
+length(Jiy[which(Jiy[a:b] <= 19)])/N
+admissible = as.integer(balanced[a:b]&tied[a:b])
 mean(admissible)
-mean(accepted)
+mean(accepted[a:b])
 
-outcome = data.frame("accepted"=accepted,"admissible"=admissible,
-                     "redseats"=redseats, "effgap"=effgap)
-outcome = outcome[80000:100000,]
+outcome = data.frame("accepted"=accepted[a:b],"admissible"=admissible[a:b],
+                     "redseats"=redseats[a:b], "effgap"=effgap[a:b], 
+                     "proposals" = proposal[a:b], "Jp"=Jpx, "Jy"=Jiy,"Jc"=Jcy,
+                     "J"=J,"compact"=compact)
 outcome = outcome[-which(outcome$accepted==0),]
+unique_proposals2 = unique(outcome$proposals)
+min(which(is.na(D[1,])))
+Dclean = D
+Dclean = t(Dclean)
+dim(Dclean)
+Dclean = Dclean[-which(outcome$admissible==0),]
+dim(Dclean)
 outcome = outcome[-which(outcome$admissible==0),]
 outcome$blueseats = Ndist - outcome$redseats
+#add a row for the enacted map
 
-par(mfrow=c(1,2),mar=c(3,3,3,3)+0.1)
-hist(outcome$redseats, freq=F,
-     breaks=seq(min(outcome$redseats)-0.5, max(outcome$redseats)+0.5, by=1))
-hist(outcome$blueseats, freq=F,
-     breaks=seq(min(outcome$blueseats)-0.5, max(outcome$blueseats)+0.5, by=1))
 par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1)
-hist(outcome$effgap,freq=F,breaks=50)
+hist(outcome$redseats, freq=F,
+     breaks=seq(min(outcome$redseats)-0.5, max(outcome$redseats)+0.5, by=1),
+     main="Histogram of Seats",xlim=c(1.5,3.5),col="red3")
+hist(outcome$blueseats, freq=F, add=T, 
+     breaks=seq(min(outcome$blueseats)-0.5, max(outcome$blueseats)+0.5, by=1),
+     col="blue3")
+legend("center",legend=c("Democratic Seats","Republican Seats"), 
+       col=c("blue3","red3"),pch=15)
+dev.copy2pdf(file="../Images/Real_3_seats.pdf")
+#hist(outcome$blueseats, freq=F,
+     #breaks=seq(min(outcome$blueseats)-0.5, max(outcome$blueseats)+0.5, by=1))
+#par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1)
+par(mfrow=c(1,2),mar=c(3,3,3,3)+0.1)
+hist(outcome$effgap,freq=F,breaks=20, main="Histogram of Efficiency Gap",
+     col="seagreen")
+hist(outcome$J, freq=F, breaks=20, main="Histrogram of Score Function",
+     col="seagreen")
+dev.copy2pdf(file="../Images/Real_3_egap_score.pdf")
+
+
+vertex_color = V(g)$district
+vertex_color[unique_proposals2] = 6
+par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1)
+plot(g,asp=0, vertex.color=vcolor[V(g)$district], 
+     vertex.frame.color=vcolor[vertex_color],
+     main="Accepted Boundary Flips")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5","Accepted Vertices"),
+       col=vcolor[1:6],pch=c(rep(19,5),1))#,bty="n")
+dev.copy2pdf(file="../Images/Real_3_acceptedflips.pdf")
+
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
+hist(outcome$proposals,breaks = length(unique_proposals2),
+     main="Histogram of Accepted proposals")
+dev.copy2pdf(file="../Images/Real_accproposals3.pdf")
+
+par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1)
+dim(Dclean)
+rsample = sample(1:dim(Dclean)[1],1)
+for(i in 1:15) {
+  plot(g,asp=0, vertex.color=vcolor[Dclean[rsample,]], 
+       vertex.frame.color=vcolor[Dclean[rsample,]], 
+       main="A Reasonable Redistrict Example")
+  legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                            "District 5"),
+         col=vcolor[1:5],pch=19)#,bty="n")
+}
+dev.copy2pdf(file="../Images/Real_3_example.pdf")
+
+rsample = sample(1:dim(Dclean)[1],1)
+V(g)$district = t(Dclean[rsample,])
+###################### DOES INITIAL DISTRICT OBEY POP BALANCE #################
+balance_check = numeric(Ndist)
+for (i in 1:Ndist) {
+  pop = sum(vertex_attr(g,"population")[which(V(g)$district==i)])
+  print(pop)
+  balance_check[i] = ifelse(pop_bound[2] >= pop & pop >= pop_bound[1], 1, 0)
+}
+balance_check
+##################### IS INITIAL DISTRICTING CONTIGUOUS ########################
+contigous_check = numeric(Ndist)
+for (i in 1:Ndist) {
+  contigous_check[i] = f.is.contigous1(i,g,V(g)$district)
+}
+contigous_check
+############################## COMPACT CHECK ##################################
+roeck = numeric(Ndist)
+for (i in 1:Ndist) {
+  xy = cbind(V(g)$centroidx[which(V(g)$district==i)],
+             V(g)$centroidy[which(V(g)$district==i)])
+  r = getMinCircle(xy)$rad
+  Acircle = r^2*pi
+  Adistrict = sum(V(g)$area[which(V(g)$district==i)])
+  roeck[i] = Acircle/Adistrict
+}
+roeck
+sum(roeck)
+############################## SPLITS #########################################
+o = unique(V(g)$county)
+split2 = 0; split3 = 0; split4 = 0;
+# get the number of counties
+# Ncounty = length(unique(V(G)$county))-1
+for (i in 1:Ncounty) {
+  # table of how many county vertices are contained across districts
+  county_districts = table(V(g)$district[which(V(g)$county==o[i])])
+  # Across how many districts are the counties split
+  splits = length(unique(V(g)$district[which(V(g)$county==o[i])]))
+  # Loop to sum up 2- and 3-way splits and the weighting
+  if (splits == 2) {
+    split2 = split2+1
+  } else if (splits == 3) {
+    split3 = split3+1
+  } else if (splits > 3) {
+    split4 = split4+1
+  }
+}
+split2
+split3
+split4
+############################## DISTRIBUTIONS ###################################
+f.seat.eff(g,Ndist)
+Jp = f.popscore(g,V(g)$district,pop_ideal,Ndist)
+Jc = f.countyscore(g,V(g)$district,Mc,Ncounty)$Jc
+Ji = f.roeck(g,V(g)$district,Ndist)$Ji
+J = (wp*Jp+wc*Jc+wi*Ji)
+
+

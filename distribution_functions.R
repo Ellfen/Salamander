@@ -52,7 +52,11 @@ f.seat.eff = function(G,Ndist) {
   }
   #print(seats)
   seats = sum(seats)
-  egap = (colSums(wasted)[1] - colSums(wasted)[2])/(sum(V(G)$blue)+sum(V(G)$red))
-  out = list("seats"=seats,"egap"=egap)
+  # When the egap is positive - advantage to republicans - otherwise advantage
+  # to the democrates
+  N = (sum(V(G)$blue)+sum(V(G)$red))
+  egap = (colSums(wasted)[1] - colSums(wasted)[2])/N
+  #prop = sum(V(G)$red)/N
+  out = list("seats"=seats,"egap"=egap)#, "prop"=prop)
   return(out)
 }

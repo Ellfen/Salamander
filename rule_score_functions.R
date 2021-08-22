@@ -65,6 +65,16 @@ f.is.balanced = function(distID, G, district, bound, pop_ideal) {
   is.balanced
 }
 
+f.is.balanced2 = function(Ndist,G,district,bound,pop_ideal) {
+  balance_check = numeric(Ndist)
+  for (i in 1:Ndist) {
+    pop = sum(vertex_attr(G,"population")[which(district==i)])
+    balance_check[i] = ifelse(pop_bound[2] >= pop & pop >= pop_bound[1], 1, 0)
+  }
+  is.balanced = ifelse(sum(balance_check)==5, 1,0)
+  is.balanced
+}
+
 # f.contigscore = function(G,district,Ndist) {
 #   contiguous_check = numeric(Ndist)
 #   for (i in 1:Ndist) {

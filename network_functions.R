@@ -88,7 +88,7 @@ f.graph = function(grid_size, graph_type, Ndist, Ncounty) {
     P.data = data.frame(name = 1:nodes, unitID = 1:nodes, county=county,
                         blue = c(2,1,2,5,3,2,5,1,3,2,4,1,2,2,1,1),#sample(1:5,nodes,replace = T),
                         red = c(4,4,5,3,3,4,2,5,5,5,2,4,2,2,1,2),#sample(1:5,nodes,replace = T),
-                        population = rep(1, nodes),
+                        population = rep(10, nodes),
                         district = district0,  area=rep(2.6,nodes),
                         centroidx = c(6,7.5,9,10.5,4.5,6,7.5,9,3,4.5,6,7.5,1.5,3,4.5,6), 
                         centroidy = c(0,0.87,1.73,2.6,0.87,1.73,2.6,3.46,

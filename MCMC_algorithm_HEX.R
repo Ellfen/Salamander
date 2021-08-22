@@ -70,7 +70,7 @@ vcolor = c("turquoise3","gold","olivedrab3","royalblue","darkorange","grey","red
 
 
 graph_attr(gplot,"margin") = rep(0.01,4)
-par(mar=c(2,0,2,0)+0.1,mfrow=c(1,1))
+par(mar=c(2,0,2,0)+0.1,mfrow=c(1,1),cex=1.5)
 plot(gplot, vertex.color=vcolor[get.vertex.attribute(g,"district")], 
      vertex.frame.color=vcolor[get.vertex.attribute(g,"district")],
      asp=1)
@@ -117,7 +117,7 @@ contigous_check
 edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
 district = V(g)$district
 dev.new()
-par(mfrow=c(1,1),mar=c(2,1.3,2,0.5)+0.1)
+par(mfrow=c(1,1),mar=c(2,1.3,2,0.5)+0.1,cex=2)
 plot(gplot, asp=1, vertex.color=vcolor[district], 
      vertex.frame.color=vcolor[district],
      edge.color=vcolor[edge_color], main="Initial Districting")
@@ -129,15 +129,15 @@ dev.off(); graphics.off()
 #axis(1)
 #axis(2,pos=-1.1)
 dev.new()
-par(mfrow=c(1,3),mar=c(2,1.3,2,0.5)+0.1)
+par(mfrow=c(1,3),mar=c(2,1.3,2,0.5)+0.1,cex=1.8)
 a = c(1525,1527,1528)
 for (j in 1:3) {
 set.seed(a[j])
 # Boundary flip in a loop
-N = 10
+N = 100
 # information to store
 balanced = accepted = admissible = numeric(N)
-Jpx = Jpy = Jcx = Jcy = Jix = Jiy = effgap = numeric(N)
+Jpx = Jpy = Jcx = Jcy = Jix = Jiy = effgap = seats= numeric(N)
 tic()
 for (i in 1:N) {
   print(i)
@@ -161,6 +161,7 @@ for (i in 1:N) {
   Jpx[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
   Jcx[i] = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
   Jix[i] = f.roeck(g,temp_dist,Ndist)$Ji
+  Jx = ((wp*Jpx[i])+(wc*Jcx[i])+(wi*Jix[i]))
   score_x = exp(-beta*((wp*Jpx[i])+(wc*Jcx[i])+(wi*Jix[i])))
   temp_dist[v.flip] = dist_y
   temp_p1[which(Elist[,1]==v.flip)] = temp_dist[v.flip]
@@ -174,6 +175,9 @@ for (i in 1:N) {
   Jpy[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
   Jcy[i] = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
   Jiy[i] = f.roeck(g,temp_dist,Ndist)$Ji
+  Jy = (wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i])
+  deltaJ = Jy - Jx
+  out = exp(-beta*deltaJ)
   score_y = exp(-beta*(wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i]))
   # Calculate the acceptance function - using uniform score for now
   Qxy = f.Q(conflict_x)
@@ -190,6 +194,7 @@ for (i in 1:N) {
         "score_x=",score_x,"\n",
         "Jpy=",round(Jpy,5),"Jcy=",round(Jcy,3),"Jiy=",round(Jiy,3),
         "score_y=",score_y,sep=" ","\n")
+    cat("Jx=",round(Jx,5),"Jy=",round(Jy,3),"deltaJ=",Jy-Jx, "out=",round(out,4),sep=" ","\n")
   }
   accepted[i] = ifelse(U <= alpha, 1,0)
   # Accept or reject proposal
@@ -204,6 +209,9 @@ for (i in 1:N) {
   }
   ##########################################################################
   effgap[i] = f.seat.eff(g,Ndist)$egap
+  seats[i] = f.seat.eff(g,Ndist)$seats
+  print(effgap)
+  print(seats)
 }
 toc()
 # 6675 secs for 10000, 111 minutes, approx 2 hours
@@ -221,6 +229,18 @@ district = V(g)$district
 }
 dev.copy2pdf(file="../Images/hex_4.pdf")
 dev.off()
+
+par(mfrow=c(1,2),mar=c(2,1.3,2,0.5)+0.1,cex=1.8)
+plot(gplot, asp=1, vertex.color="white", 
+     vertex.frame.color="blue",
+     edge.color=vcolor[edge_color], main="Initial Districting",
+     vertex.label=V(g)$blue)
+plot(gplot, asp=1, vertex.color="white", 
+     vertex.frame.color="red",
+     edge.color=vcolor[edge_color], main="Initial Districting",
+     vertex.label=V(g)$red)
+legend("topleft",legend=c("District 1","District 2", "District 3"),
+       col=vcolor[1:3],pch=19,bty="n")
 
 library(plotrix)
 library(shotGroups)

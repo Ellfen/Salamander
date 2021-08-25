@@ -7,8 +7,11 @@ source("distribution_functions.R")
 library(sf)
 ###############################################################################
 # Load the sampling data
-load("../Data/Runs/LR/REAL_500_2_2_S.RData")
-head(REAL_500_2_2_S)
+load("REAL_500_2_2_S4.RData")
+head(REAL_500_2_2_S4)
+dim(REAL_500_2_2_S4)
+
+############################### FOR PLOTS #####################################
 # Load the map configuration as stood after sampling
 load("../Data/Runs/LR/REAL_D.RData")
 # Load the original map
@@ -69,3 +72,40 @@ plot(gsampled, asp=0, vertex.color=vcolor[V(gsampled)$district],
 # Get metrics for each map - note that the sampled map is not necessarily a 
 # accepted map - may need to run though several iterations of the algorithm to get
 # one that meets admissible requirements.
+
+################################# CLEANING ####################################
+data = REAL_500_2_2_S4[20000:140077,]
+data$admissible = as.integer(data$balanced & data$tied)
+data = data[-which(data$accepted==0),]
+data = data[which(data$admissible==1),]
+# thinning value
+n = 10
+index = seq(1,5051,n)
+data = data[index,]
+# N value for each of the estimates for error epsilon
+epsilon1 = 0.1
+epsilon2 = 0.001
+N_egap = var(data$effgap)/(epsilon2^2)
+N_roeck = var(data$Ji)/(epsilon1^2)
+# Calculate the autocorrelation
+rho_egap = acf(data$effgap)
+rho_roeck = acf(data$Ji)
+# Calculate how much you need to inflate N by
+inflation_egap = (1+(2*sum(rho_egap$acf)))
+inflation_roeck = (1+(2*sum(rho_roeck$acf)))
+# what N is required
+N_egap*inflation_egap
+N_roeck*inflation_roeck
+# lets look at acf over full sample
+acf(data$effgap,lag.max = 500)
+acf(data$Ji, lag.max=500)
+
+# Do the calculations the opposite way - what error will I get with a sample
+# size of 1000
+# N/Neff = inflation
+# My inflated sample is approx 1000
+M_egap = 1000/inflation_egap
+M_roeck = 1000/inflation_roeck
+
+MSE_egap = sqrt(var(data$effgap)/M_egap)
+MSE_roeck = sqrt(var(data$Ji)/M_roeck)

@@ -7,7 +7,7 @@ source("rule_score_functions.R")
 source("distribution_functions.R")
 # Acceptance probability function f.alpha
 f.alpha = function(Qxy,Qyx,score_x,score_y,admissible){
-  min((Qyx*score_y*admissible)/(Qxy*score_x), 1)
+  min((Qyx*score_y)/(Qxy*score_x), 1)
 }
 f.Q = function(conflicts){1/(2*length(conflicts))}
 ############################ SETUP THE NETWORK ################################
@@ -29,7 +29,7 @@ gplot = f.graph(n,grid,Ndist,Ncounty)
 nodes = vcount(gplot)
 g = gplot
 # Do not add perimeter info
-# g = f.perimeter(gplot,nodes)
+g = f.perimeter(gplot,nodes)
 
 # Absorb discontiguous nodes
 if (grid == 5) {
@@ -41,7 +41,7 @@ if (grid == 5) {
 
 # Setup the plotting information
 V(gplot)$size = 15
-V(gplot)$label = V(gplot)$county
+V(gplot)$label = V(gplot)$name#V(gplot)$county
 if (n > 20) {
   V(gplot)$size = 2 # Reduce size of the nodes
   V(gplot)$label = NA # Do not print labels
@@ -81,7 +81,7 @@ class(Elist) = "numeric"
 E(g)$p1 = V(g)$district[Elist[,1]]
 E(g)$p2 = V(g)$district[Elist[,2]]
 # Make a note of which edges are perimeter edges
-# Eint = min(which(Elist[,2]==nodes+1))
+Eint = min(which(Elist[,2]==nodes+1))
 ################################ CONSTANTS #####################################
 # population constants
 pop_ideal = sum(vertex_attr(g,"population"))/Ndist
@@ -114,36 +114,36 @@ contigous_check
 
 # Plot before starting 
 # internal edges are color - conflicting edges are grey
-edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
+edge_color = ifelse(E(g)$p1[1:(Eint-1)] != E(g)$p2[1:Eint-1],6,E(g)$p1[1:(Eint-1)])#ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
 district = V(g)$district
-dev.new()
+#dev.new()
 par(mfrow=c(1,1),mar=c(2,1.3,2,0.5)+0.1,cex=2)
 plot(gplot, asp=1, vertex.color=vcolor[district], 
      vertex.frame.color=vcolor[district],
      edge.color=vcolor[edge_color], main="Initial Districting")
 legend("topleft",legend=c("District 1","District 2", "District 3"),
        col=vcolor[1:3],pch=19,bty="n")
-dev.copy2pdf(file="../Images/hex_init.pdf")
-dev.off(); graphics.off()
+#dev.copy2pdf(file="../Images/hex_init.pdf")
+#dev.off(); graphics.off()
 
 #axis(1)
 #axis(2,pos=-1.1)
-dev.new()
+#dev.new()
 par(mfrow=c(1,3),mar=c(2,1.3,2,0.5)+0.1,cex=1.8)
 a = c(1525,1527,1528)
 for (j in 1:3) {
 set.seed(a[j])
 # Boundary flip in a loop
-N = 100
+N = 50
 # information to store
-balanced = accepted = admissible = numeric(N)
-Jpx = Jpy = Jcx = Jcy = Jix = Jiy = effgap = seats= numeric(N)
+balanced = accepted = numeric(N)
+Jpx = Jpy = Jcx = Jcy = Jix = Jiy = effgap = seats = polsbyx = polsbyy = numeric(N)
 tic()
 for (i in 1:N) {
   print(i)
   ################################ FLIP WALK ##################################
   # step 1 - vector of conflicting edges
-  conflict_x = which(E(g)$p1 != E(g)$p2) #which(E(g)$p1[1:(Eint-1)] != E(g)$p2[1:Eint-1])
+  conflict_x = which(E(g)$p1[1:(Eint-1)] != E(g)$p2[1:Eint-1]) #which(E(g)$p1 != E(g)$p2)
   # sample uniformly from all conflicting edges
   c.edge = sample(conflict_x,1)
   # choose with p=0.5 which vertex to flip (only a choice of two)
@@ -161,6 +161,7 @@ for (i in 1:N) {
   Jpx[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
   Jcx[i] = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
   Jix[i] = f.roeck(g,temp_dist,Ndist)$Ji
+  polsbyx[i] = f.compactscore(g,temp_dist,temp_p1,temp_p2,Ndist)
   Jx = ((wp*Jpx[i])+(wc*Jcx[i])+(wi*Jix[i]))
   score_x = exp(-beta*((wp*Jpx[i])+(wc*Jcx[i])+(wi*Jix[i])))
   temp_dist[v.flip] = dist_y
@@ -169,12 +170,11 @@ for (i in 1:N) {
   # Check if proposal is contigous
   contigous1 = f.is.contigous1(dist_x,g,temp_dist)
   # Check if proposal is balanced - store this information
-  balanced[i] = f.is.balanced(c(dist_x,dist_y),g,temp_dist,pop_bound,pop_ideal)
-  # Removing balanced from admissible function
-  admissible[i] = as.integer(contigous1 & balanced)
+  balanced[i] = f.is.balanced2(Ndist,g,temp_dist,pop_bound,pop_ideal)
   Jpy[i] = f.popscore(g,temp_dist,pop_ideal,Ndist)
   Jcy[i] = f.countyscore(g,temp_dist,Mc,Ncounty)$Jc
   Jiy[i] = f.roeck(g,temp_dist,Ndist)$Ji
+  polsbyy[i] = f.compactscore(g,temp_dist,temp_p1,temp_p2,Ndist)
   Jy = (wp*Jpy[i]+wc*Jcy[i]+wi*Jiy[i])
   deltaJ = Jy - Jx
   out = exp(-beta*deltaJ)
@@ -183,22 +183,24 @@ for (i in 1:N) {
   Qxy = f.Q(conflict_x)
   conflict_y = which(temp_p1 != temp_p2)#which(temp_p1[1:(Eint-1)] != temp_p2[1:(Eint-1)])
   Qyx = f.Q(conflict_y)
-  alpha = f.alpha(Qxy,Qyx,score_x,score_y,admissible[i])
+  alpha = f.alpha(Qxy,Qyx,score_x,score_y)
   # generate a uniform random variable
   U = runif(1)
   if (N == 1) {
     cat("edge =",Elist[c.edge,],"v.flip =",v.flip,"contig =",contigous1, 
-        "balanced =",balanced,"admissible =",admissible, 
+        "balanced =",balanced, 
         "U =",round(U,3),"alpha =",round(alpha,3),sep=" ","\n")
     cat("Jpx=",round(Jpx,5),"Jcx=",round(Jcx,3),"Jix=",round(Jix,3),
+        "PPx=",polsbyx,
         "score_x=",score_x,"\n",
         "Jpy=",round(Jpy,5),"Jcy=",round(Jcy,3),"Jiy=",round(Jiy,3),
+        "PPy=",polsbyy,
         "score_y=",score_y,sep=" ","\n")
     cat("Jx=",round(Jx,5),"Jy=",round(Jy,3),"deltaJ=",Jy-Jx, "out=",round(out,4),sep=" ","\n")
   }
-  accepted[i] = ifelse(U <= alpha, 1,0)
+  accepted[i] = ifelse(U <= alpha & contigous1==1 , 1,0)
   # Accept or reject proposal
-  if (U <= alpha){
+  if (U <= alpha & contigous1 == 1){
     V(g)$district[v.flip] = dist_y
     E(g)$p1 = temp_p1
     E(g)$p2 = temp_p2
@@ -210,27 +212,46 @@ for (i in 1:N) {
   ##########################################################################
   effgap[i] = f.seat.eff(g,Ndist)$egap
   seats[i] = f.seat.eff(g,Ndist)$seats
-  print(effgap)
-  print(seats)
+  # print(effgap)
+  # print(seats)
 }
 toc()
 # 6675 secs for 10000, 111 minutes, approx 2 hours
 
 # Plot after 
 # internal edges are color - conflicting edges are grey
-edge_color[c.edge] = 7
-frame_color = V(g)$district
-frame_color[v.flip] = 7
-plot(gplot,asp=1, vertex.color=vcolor[district], 
-     vertex.frame.color=vcolor[frame_color],
-     edge.color=vcolor[edge_color], main=paste("Proposal",j,sep=" "))
-edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
-district = V(g)$district
+# edge_color[c.edge] = 7
+# frame_color = V(g)$district
+# frame_color[v.flip] = 7
+# plot(gplot,asp=1, vertex.color=vcolpior[district], 
+#      vertex.frame.color=vcolor[frame_color],
+#      edge.color=vcolor[edge_color], main=paste("Proposal",j,sep=" "))
+# edge_color = ifelse(E(g)$p1 != E(g)$p2,6,E(g)$p1)
+# district = V(g)$district
 }
-dev.copy2pdf(file="../Images/hex_4.pdf")
-dev.off()
+# dev.copy2pdf(file="../Images/hex_4.pdf")
+# dev.off()
+par(mfrow=c(1,3),mar=c(3,3,3,3)+0.1,cex=1.3,cex.main=1.1)
+plot(gplot, asp=1, vertex.color=vcolor[district], 
+     vertex.frame.color=vcolor[district],
+     edge.color=vcolor[edge_color], main="VTD Nodes")
+par(cex=1,cex.main=1.1)
+hist(seats[which(accepted==1)], freq=F,
+     breaks=seq(min(seats)-0.5, max(seats)+0.5, by=1),
+     main="Histogram of Seats",xlim=c(-0.5,3.5),ylim=c(0,1),col="red3")
+hist(3-seats[which(accepted==1)], freq=F, add=T, 
+     breaks=seq(min(3-seats)-0.5, max(3-seats)+0.5, by=1),
+     col="blue3")
+legend("center",legend=c("Blue Seats","Red Seats"), 
+       col=c("blue3","red3"),pch=15)
+par(cex=1.1)
+hist(effgap[which(accepted==1)],freq=F,ylim=c(0,100),breaks=20, main="Histogram of Efficiency Gap",
+     col="seagreen")
+dev.copy2pdf(file="../Images/hex_egap_seats.pdf")
+hist(polsbyx[which(accepted==1)])
+hist(Jix[which(accepted==1)])
 
-par(mfrow=c(1,2),mar=c(2,1.3,2,0.5)+0.1,cex=1.8)
+par(mfrow=c(1,2),mar=c(2,1.3,2,0.5)+0.1)
 plot(gplot, asp=1, vertex.color="white", 
      vertex.frame.color="blue",
      edge.color=vcolor[edge_color], main="Initial Districting",

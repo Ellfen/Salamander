@@ -27,7 +27,7 @@ barplot(p_counts, ylim=c(0,0.12), names.arg=c(letters,""))
 # Pick a starting value X0
 Xj = sample(1:27, 1, prob=p_counts)
 # Define how many iterations
-N = 10000
+N = 1000
 # Define a vector to store the Markov chain
 X = numeric(N)
 # Define alpha
@@ -54,3 +54,4 @@ x_values = as.numeric(x_values); x_values
 
 bp = barplot(p_scores, ylim=c(0,0.12), names.arg=c(letters,""))
 points(bp[x_values], p_out, pch=16, col="red")
+

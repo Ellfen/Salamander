@@ -16,9 +16,9 @@ Ndist = 5
 Ncounty = 38 
 
 ## CHOOSE WHICH SHAPEFILE TO READ ##
-NCshp = st_read("data_cleaning/NCOriginal.shp")
-#NCshp = st_read("../Data/Runs/LR/SHP/NCRejigH20K.shp")
-load("../Data/Runs/LR/REAL_D3.RData")
+#NCshp = st_read("data_cleaning/NCOriginal.shp")
+NCshp = st_read("data_cleaning/NCRejig2.shp")
+load("../Data/Runs/LR/PERTURB_1.RData")
 
 # Create the graph
 P.data = as.data.frame(NCshp)
@@ -47,10 +47,32 @@ if (absorb == 1) {
   V(g)$district[which(V(g)$name=="221")] = 1
   V(g)$district[which(V(g)$name=="218")] = 1
 }
+if (absorb == 2) {
+  #absorb yellow block into 5
+  names = V(g)$name
+  class(names) = "numeric"
+  index = names[which(V(g)$district==2)]
+  index = index[which(index >= 275 & index <= 386)]
+  V(g)$district[index] = 5
+  # absorb lost blues into 5
+  V(g)$district[278]=5
+  V(g)$district[380]=5
+  V(g)$district[325]=5
+  # absorb lost orange into purple
+  V(g)$district[882]=4
+  V(g)$district[986]=4
+  V(g)$district[867]=4
+  V(g)$district[969]=4
+  V(g)$district[983]=4
+  V(g)$district[989]=4
+}
+for (i in 1:5) {
+  print(sum(V(g)$district==i))
+}
 
 swap = 1
 if (swap == 1) {
-  V(g)$district = REAL_D3$H
+  V(g)$district = PERTURB_1$S
 }
 
 # Setup the plotting information
@@ -61,19 +83,6 @@ vcolor = c("turquoise3","gold","olivedrab3","royalblue","darkorange","black",
            "red")
 graph_attr(g,"margin") = rep(0.01,4)
 
-# Plot and save
-# CHANGE THE PLOT TITLE
-par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
-plot(g, asp=0, vertex.color=vcolor[V(g)$district], 
-     vertex.frame.color=vcolor[V(g)$district], 
-     main="The Enacted Electoral Map")
-legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
-                          "District 5"),
-       col=vcolor[1:5],pch=19)#,bty="n")
-# CHANGE THE FILE NAME
-dev.copy2pdf(file="../Images/Real_init3.pdf")
-
-
 # The edgelist won't change so create it now
 Elist = get.edgelist(g)
 class(Elist) = "numeric"
@@ -81,6 +90,22 @@ E(g)$p1 = V(g)$district[Elist[,1]]
 E(g)$p2 = V(g)$district[Elist[,2]]
 # Make a note of which edges are perimeter edges
 # Eint = min(which(Elist[,2]==nodes+1))
+
+#V(g)$label=rep(NA,1060)
+#V(g)$label[which(V(g)$district==5)] = V(g)$name[which(V(g)$district==5)]
+#V(g)$label=NA
+# Plot and save
+# CHANGE THE PLOT TITLE
+par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
+plot(g, asp=0, vertex.color=vcolor[V(g)$district], 
+     vertex.frame.color=vcolor[V(g)$district], 
+     main="Perturbed Starting Configuration A")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5"),
+       col=vcolor[1:5],pch=19)#,bty="n")
+# CHANGE THE FILE NAME
+dev.copy2pdf(file="../Images/Perturb_init1.pdf")
+
 ################################ CONSTANTS #####################################
 # population constants
 pop_ideal = sum(vertex_attr(g,"population"))/Ndist
@@ -242,14 +267,14 @@ for (i in 1:N) {
   }
   ##########################################################################
   #beta = beta + (1/(N-1))
-  print(i)
+  #print(i)
 }
 toc()
 print("Heating Finished")
 # save the new district info
 
 # save the outputs
-REAL_500_2_2_H4 = data.frame("balanced"=balanced,
+PERTURB_500_2_2_H1 = data.frame("balanced"=balanced,
                                     "compact"=compact,
                                     "tied"=tied,
                                     "accepted"=accepted,
@@ -260,20 +285,20 @@ REAL_500_2_2_H4 = data.frame("balanced"=balanced,
                                     "proposal"=proposal,
                                     "redseats"=redseats,
                                     "effgap"=effgap)
-save(REAL_500_2_2_H4,
-     file="../Data/Runs/LR/REAL_500_2_2_H4.RData")
-REAL_D4 = data.frame("H"=V(g)$district,"A"=rep(1,nodes),"S"=rep(1,nodes))
+save(PERTURB_500_2_2_H1,
+     file="../Data/Runs/LR/PERTURB_500_2_2_H1.RData")
+PERTURB_2 = data.frame("H"=V(g)$district,"A"=rep(1,nodes),"S"=rep(1,nodes))
 
 # CHANGE THE PLOT TITLE
 par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
 plot(g, asp=0, vertex.color=vcolor[V(g)$district],
       vertex.frame.color=vcolor[V(g)$district],
-      main="The Enacted Map After Heating")
+      main="Perturbation A After Heating")
 legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
 # CHANGE THE FILE NAME
-dev.copy2pdf(file="../Images/Real_H4.pdf")
+dev.copy2pdf(file="../Images/PERTURB_1_H.pdf")
 
 ################################### COOLING #################################
 N = 60000
@@ -360,14 +385,14 @@ for (i in 1:N) {
   }
   ##########################################################################
   beta = beta + (1/(N-1))
-  print(i)
+  #print(i)
 }
 toc()
 print("Cooling Finished")
 # save the new district info
 
 # save the outputs
-REAL_500_2_2_C4 = data.frame("balanced"=balanced,
+PERTURB_500_2_2_C1 = data.frame("balanced"=balanced,
                              "compact"=compact,
                              "tied"=tied,
                              "accepted"=accepted,
@@ -378,24 +403,24 @@ REAL_500_2_2_C4 = data.frame("balanced"=balanced,
                              "proposal"=proposal,
                              "redseats"=redseats,
                              "effgap"=effgap)
-save(REAL_500_2_2_C4,
-     file="../Data/Runs/LR/REAL_500_2_2_C4.RData")
-REAL_D4$A = V(g)$district
+save(PERTURB_500_2_2_C1,
+     file="../Data/Runs/LR/PERTURB_500_2_2_C1.RData")
+PERTURB_1$A = V(g)$district
 
 # CHANGE THE PLOT TITLE
-par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1)
+par(mfrow=c(1,1),mar=c(2,2,2,0.5)+0.1,cex=1.1)
 plot(g, asp=0, vertex.color=vcolor[V(g)$district],
       vertex.frame.color=vcolor[V(g)$district],
-      main="The Enacted Map After Cooling")
+      main="Perturbation A After Cooling")
 legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
 # CHANGE THE FILE NAME
-dev.copy2pdf(file="../Images/Real_C4.pdf")
+dev.copy2pdf(file="../Images/PERTURB_1_C.pdf")
 
 
 ################################## SAMPLING #################################
-N = 150000
+N = 100000
 beta = 1
 # information to store
 balanced = accepted = admissible = compact = tied = contigous = numeric(N)
@@ -490,7 +515,7 @@ print("Sampling Finished")
 # save the new district info
 
 # save the outputs
-REAL_500_2_2_S4 = data.frame("balanced"=balanced,
+PERTURB_500_2_2_S2 = data.frame("balanced"=balanced,
                              "compact"=compact,
                              "tied"=tied,
                              "accepted"=accepted,
@@ -501,38 +526,42 @@ REAL_500_2_2_S4 = data.frame("balanced"=balanced,
                              "proposal"=proposal,
                              "redseats"=redseats,
                              "effgap"=effgap)
-save(REAL_500_2_2_S4,
-     file="../Data/Runs/LR/REAL_500_2_2_S4.RData")
+save(PERTURB_500_2_2_S2,
+     file="../Data/Runs/LR/PERTURB_500_2_2_S2.RData")
 
-REAL_D4$S = V(g)$district
+PERTURB_2$S = V(g)$district
 
-save(REAL_D4, file="../Data/Runs/LR/REAL_D4.RData")
-save(D4, file="../Data/Runs/LR/matrixD4.RData")
+save(PERTURB_2, file="../Data/Runs/LR/PERTURB_2.RData")
+save(D, file="../Data/Runs/LR/matrix_perturb2.RData")
 
 ############################ PRELIMINARY ANALYSIS ############################
-
 # Plot after 
-par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1,cex=1.1)
 plot(g,asp=0, vertex.color=vcolor[(V(g)$district)], 
      vertex.frame.color=vcolor[V(g)$district], 
      main="A Reasonable Redistrict Example")
 legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
                           "District 5"),
        col=vcolor[1:5],pch=19)#,bty="n")
-dev.copy2pdf(file="../Images/Real_end3.pdf")
-
-mean(J)
-plot(J,type="l",main="The score function, J, of the proposals")
-hist(J)
-dev.copy2pdf(file="../Images/Real_J3.pdf")
+dev.copy2pdf(file="../Images/PERTURB_1_END2.pdf")
 
 a = 1
-b = 4915
+b = i
+
+mean(J[a:b])
+plot(J[a:b],type="l",main="The score function, J, of the proposals")
+#hist(J[a:b])
+dev.copy2pdf(file="../Images/PERTURB_1_J1.pdf")
+
+a = 1
+b = 89678
+plot(J[a:b],type="l",main="The score function, J, of the proposals")
+
 
 unique_proposals = unique(proposal[a:b])
 par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
 hist(proposal[a:b],breaks = length(unique_proposals),main="Histogram of proposals")
-dev.copy2pdf(file="../Images/Real_proposals3.pdf")
+dev.copy2pdf(file="../Images/PERTURB_1_proposals1.pdf")
 
 vertex_color = V(g)$district
 vertex_color[unique_proposals] = 6
@@ -545,87 +574,77 @@ legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
        col=vcolor[1:6],pch=c(rep(19,5),1))#,bty="n")
 
 # Store info on how many admissible, how many balanced, and how many accepted
-# When beta = 0 then mean(admissible) approx mean(accepted)
 mean(balanced[a:b])
 mean(tied[a:b])
 min(compact[a:b])
 max(compact[a:b])
-length(compact[which(compact[a:b] <= 7.5)])/N
-min(Jiy)
-max(Jiy)
-length(Jiy[which(Jiy[a:b] <= 19)])/N
+length(compact[which(compact[a:b] <= 6)])/(b-a)
+min(Jiy[a:b])
+max(Jiy[a:b])
+length(Jiy[which(Jiy[a:b] <= 18)])/(b-a)
 admissible = as.integer(balanced[a:b]&tied[a:b])
+adm = as.integer(balanced[1:b]&tied[1:b])[which(accepted[1:b]==1)]
 mean(admissible)
 mean(accepted[a:b])
 
 outcome = data.frame("accepted"=accepted[a:b],"admissible"=admissible[a:b],
                      "redseats"=redseats[a:b], "effgap"=effgap[a:b], 
-                     "proposals" = proposal[a:b], "Jp"=Jpx, "Jy"=Jiy,"Jc"=Jcy,
-                     "J"=J,"compact"=compact)
+                     "proposals" = proposal[a:b], "Jp"=Jpx[a:b], 
+                     "Jy"=Jiy[a:b],"Jc"=Jcy[a:b],
+                     "J"=J[a:b],"compact"=compact[a:b])
 outcome = outcome[-which(outcome$accepted==0),]
 unique_proposals2 = unique(outcome$proposals)
-min(which(is.na(D[1,])))
-Dclean = D
+min(which(is.na(D[2,])))
+Dclean = D[,1:(min(which(is.na(D[1,])))-1)]
+dim(Dclean)
+which(is.na(Dclean[1,]))
 Dclean = t(Dclean)
 dim(Dclean)
-Dclean = Dclean[-which(outcome$admissible==0),]
+Dclean = Dclean[which(adm==1),]
 dim(Dclean)
 outcome = outcome[-which(outcome$admissible==0),]
 outcome$blueseats = Ndist - outcome$redseats
 #add a row for the enacted map
 
-par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1)
+par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1,cex=1.1)
 hist(outcome$redseats, freq=F,
      breaks=seq(min(outcome$redseats)-0.5, max(outcome$redseats)+0.5, by=1),
      main="Histogram of Seats",xlim=c(1.5,3.5),col="red3")
 hist(outcome$blueseats, freq=F, add=T, 
      breaks=seq(min(outcome$blueseats)-0.5, max(outcome$blueseats)+0.5, by=1),
      col="blue3")
-legend("center",legend=c("Democratic Seats","Republican Seats"), 
+legend("center",legend=c("Blue Seats","Red Seats"), 
        col=c("blue3","red3"),pch=15)
-dev.copy2pdf(file="../Images/Real_3_seats.pdf")
+dev.copy2pdf(file="../Images/PERTURB_1_seats1.pdf")
 #hist(outcome$blueseats, freq=F,
      #breaks=seq(min(outcome$blueseats)-0.5, max(outcome$blueseats)+0.5, by=1))
 #par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1)
-par(mfrow=c(1,2),mar=c(3,3,3,3)+0.1)
+par(mfrow=c(1,2),mar=c(3,3,3,3)+0.1,cex=1.1)
 hist(outcome$effgap,freq=F,breaks=20, main="Histogram of Efficiency Gap",
      col="seagreen")
-hist(outcome$J, freq=F, breaks=20, main="Histrogram of Score Function",
+hist(outcome$Jy, freq=F, breaks=20, main="Histrogram of Roeck Score",
      col="seagreen")
-dev.copy2pdf(file="../Images/Real_3_egap_score.pdf")
+dev.copy2pdf(file="../Images/PERTURB_1_egap_roeck1.pdf")
+mean(outcome$effgap)
+mean(outcome$Jy)
+mean(outcome$compact)
+mean(outcome$effgap >= 0.32)
+mean(outcome$Jy >= 25.806)
 
-
-vertex_color = V(g)$district
-vertex_color[unique_proposals2] = 6
-par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1)
-plot(g,asp=0, vertex.color=vcolor[V(g)$district], 
-     vertex.frame.color=vcolor[vertex_color],
-     main="Accepted Boundary Flips")
-legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
-                          "District 5","Accepted Vertices"),
-       col=vcolor[1:6],pch=c(rep(19,5),1))#,bty="n")
-dev.copy2pdf(file="../Images/Real_3_acceptedflips.pdf")
-
-par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1)
-hist(outcome$proposals,breaks = length(unique_proposals2),
-     main="Histogram of Accepted proposals")
-dev.copy2pdf(file="../Images/Real_accproposals3.pdf")
-
+# Plot an example of a reasonable redistricting
 par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1)
 dim(Dclean)
 rsample = sample(1:dim(Dclean)[1],1)
-for(i in 1:15) {
-  plot(g,asp=0, vertex.color=vcolor[Dclean[rsample,]], 
-       vertex.frame.color=vcolor[Dclean[rsample,]], 
-       main="A Reasonable Redistrict Example")
-  legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
-                            "District 5"),
-         col=vcolor[1:5],pch=19)#,bty="n")
-}
-dev.copy2pdf(file="../Images/Real_3_example.pdf")
+plot(g,asp=0, vertex.color=vcolor[Dclean[rsample,]], 
+     vertex.frame.color=vcolor[Dclean[rsample,]], 
+     main="A Reasonable Redistrict Example")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5"),
+       col=vcolor[1:5],pch=19)#,bty="n")
+dev.copy2pdf(file="../Images/PERTURB_1_example6097.pdf")
 
-rsample = sample(1:dim(Dclean)[1],1)
 V(g)$district = t(Dclean[rsample,])
+
 ###################### DOES INITIAL DISTRICT OBEY POP BALANCE #################
 balance_check = numeric(Ndist)
 for (i in 1:Ndist) {
@@ -681,4 +700,79 @@ Jc = f.countyscore(g,V(g)$district,Mc,Ncounty)$Jc
 Ji = f.roeck(g,V(g)$district,Ndist)$Ji
 J = (wp*Jp+wc*Jc+wi*Ji)
 
+vertex_color = V(g)$district
+vertex_color[unique_proposals2] = 6
+par(mfrow=c(1,1),mar=c(3,3,3,3)+0.1,cex=1.1)
+plot(g,asp=0, vertex.color=vcolor[V(g)$district], 
+     vertex.frame.color=vcolor[vertex_color],
+     main="Accepted Boundary Flips")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5","Accepted Vertices"),
+       col=vcolor[1:6],pch=c(rep(19,5),1))#,bty="n")
+dev.copy2pdf(file="../Images/PERTURB_1_acceptedflips1.pdf")
+
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1,cex=1.1)
+hist(outcome$proposals,breaks = 1060,ylim=c(0,100),
+     main="Histogram of Accepted Proposals")
+dev.copy2pdf(file="../Images/PERTURB_1_accproposals1.pdf")
+
+unique_proposals = unique(proposal[a:b])
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1,cex=1.1)
+hist(proposal[a:b],breaks = 1060,
+     main="Histogram of All Proposals")
+dev.copy2pdf(file="../Images/PERTURB_1_proposals1.pdf")
+
+vertex_color = V(g)$district
+vertex_color[unique_proposals] = 6
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1,cex=1.1)
+plot(g,asp=0, vertex.color=vcolor[V(g)$district], 
+     vertex.frame.color=vcolor[vertex_color],
+     main="Proposed Boundary Flips")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5","Proposed Vertices"),
+       col=vcolor[1:6],pch=c(rep(19,5),1))#,bty="n")
+
+dev.copy2pdf(file="../Images/PERTURB_1_proposedflips1.pdf")
+
+# apply Monte Carlo to get expected values
+mean(outcome$effgap)
+mean(outcome$Jy)
+mean(outcome$compact)
+
+total=matrix(NA,nrow=5,ncol=2)
+seats=numeric(Ndist)
+for (i in 1:Ndist) {
+  # total democrate vote
+  total[i,1] = sum(vertex_attr(g,"blue")[which(V(g)$district == i)])
+  # total republican vote
+  total[i,2] = sum(vertex_attr(g,"red")[which(V(g)$district == i)])
+  #print(total)
+  seats[i] = ifelse(total[i,2] >= total[i,1], 1, 0)
+}
+#print(seats)
+sum(seats)
+total
+
+total=matrix(NA,nrow=5,ncol=2)
+seats=numeric(Ndist)
+for (i in 1:Ndist) {
+  # total democrate vote
+  total[i,1] = sum(P.data$blue[which(P.data$district == i)])
+  # total republican vote
+  total[i,2] = sum(P.data$red[which(P.data$district == i)])
+  #print(total)
+  seats[i] = ifelse(total[i,2] >= total[i,1], 1, 0)
+}
+#print(seats)
+sum(seats)
+total
+
+
+par(mfrow=c(1,1),mar=c(2,2,2,2)+0.1,cex=1.1)
+plot(g,asp=0, vertex.color=vcolor[V(g)$district], 
+     vertex.frame.color=vcolor[vertex_color],
+     main="Proposed Boundary Flips")
+legend("topleft",legend=c("District 1","District 2", "District 3","District 4",
+                          "District 5","Proposed Vertices"),
+       col=vcolor[1:6],pch=c(rep(19,5),1))#,bty="n")
 

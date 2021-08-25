@@ -353,11 +353,14 @@ library(sf)
 load("/Users/laura/Documents/MATH5871_Dissertation/Programming/Rcode/data_cleaning/NCOriginal.RData")
 NCRejig = NCDataSub
 sum(NCRejig$population==NCDataSub$population)
-NCRejig = NCDataSub[order(NCRejig$centroidx,NCRejig$centroidy),]
+for (i in 1:5) {
+  print(sum(NCRejig$district==i))
+}
+NCRejig = NCDataSub[order(NCRejig$district,NCRejig$centroidx,NCRejig$centroidy),]
 1060/5
-NCRejig$district = rep(1:5,each=212)
+NCRejig$district = c(rep(1,227),rep(2,272),rep(3,213),rep(4,166),rep(5,182))
 NCRejig = NCRejig[order(NCRejig$name),]
-save(NCRejig, file="NCRejig.RData")
-st_write(NCRejig,"NCRejig.shp",append=F)
+save(NCRejig, file="NCRejig2.RData")
+st_write(NCRejig,"NCRejig2.shp",append=F)
 
 
